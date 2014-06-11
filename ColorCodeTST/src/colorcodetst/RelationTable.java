@@ -114,6 +114,8 @@ public class RelationTable {
 		
 		System.out.println("...........................................................................");
 		
+		if( focal != null) System.out.println("This is a sorted relationTable. The focal is: "+focal);
+		
 		// Hunderter nach rechts antragen
 		System.out.print("                ");
 		for( int i=0; i< index_col.size();i++) {

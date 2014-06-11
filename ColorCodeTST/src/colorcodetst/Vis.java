@@ -1,7 +1,6 @@
 package colorcodetst;
 
 import processing.core.*;
-import sun.tools.tree.CaseStatement;
 
 import javax.swing.JFrame;
 import java.awt.MouseInfo;
@@ -60,7 +59,7 @@ public class Vis extends PApplet {
 	
 	void visualize1(RelationTable _table) {
 		
-
+		int maxTint = pa.keywordsList.length;
 		int cellSize = 12;
 		int noOfCells = _table.getSize();
 		int xySize = 200 + ( cellSize * noOfCells );
@@ -68,13 +67,13 @@ public class Vis extends PApplet {
 		vis = createGraphics(xySize, xySize);
 		
 		vis.beginDraw();
-		vis.background(255);
+		vis.background(bg);
 		vis.noStroke();
 
 		for(int x = 0; x<noOfCells; x++ ) {
 			for(int y = 0; y<noOfCells; y++) {
 				
-				vis.fill(  255-(_table.getRelationByIndex(x, y)*10)  );
+				vis.fill(  map(_table.getRelationByIndex(y, x), 0, maxTint, 255, 0)  );
 				vis.rect(100+(x*(cellSize)), 100+(y*(cellSize)), cellSize, cellSize);
 			}
 		}
@@ -96,7 +95,7 @@ public class Vis extends PApplet {
 		brush = loadImage(pa.dataFolderPath+"brush1.png");
 		
 		vis.beginDraw();
-		vis.background(255);
+		vis.background(bg);
 		vis.noStroke();
 
 		//vis.image(brush,200,200);

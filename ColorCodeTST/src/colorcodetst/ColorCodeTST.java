@@ -1,25 +1,13 @@
 package colorcodetst;
 
 import java.awt.Button;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.GridBagLayout;
 import java.awt.Panel;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-
 import java.io.*;
 import java.util.*;
-
 import javax.swing.*;
-
-import com.sun.java.swing.plaf.motif.MotifBorders.BevelBorder;
-
-import java.awt.Color;
-
 import processing.core.PApplet;
-import processing.core.PGraphics;
-import processing.core.PImage;
 import processing.data.XML;
 
 public class ColorCodeTST extends PApplet implements ActionListener {
