@@ -1,43 +1,51 @@
 package colorcodetst;
 
-import java.awt.Button;
-import java.awt.Panel;
+import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.*;
 import java.util.*;
 import javax.swing.*;
+
 import processing.core.PApplet;
 import processing.data.XML;
+import MyUtils.StatusGui;
 
 public class ColorCodeTST extends PApplet implements ActionListener {
 	
 	private static final long serialVersionUID = 4444550612806782893L;
 	
-	private Panel 			buttonPanel;
-	private Button 			visualize, save_visualisation, close, quit;
-	private JRadioButton	mode1, mode2;
-	private ButtonGroup		group;
-	private Panel			visOptions;
-	private Button			visOptions_go;
-	private JComboBox		visTable, visOptions_focal, visOptions_type;
+	public boolean debug = false;
+	
+	private JPanel				container;
+	
+	private Panel 				buttonPanel;
+	private Button 				visualize, save_visualisation, save_all_sorted, close, quit;
+	private JRadioButton		mode1, mode2, mode3;
+	private ButtonGroup			group;
+	private Panel				sortOptions;
+	private Button				sortOptions_go;
+	private JComboBox			visTable, sortOptions_focal, sortOptions_type;
 	
 	VisFrame visFrame;
+	StatusGui stat;
 	
-	public enum tables { NONE, KEYS, OBJ_S, OBJ_M };
+	public enum tables { NONE, KEYS, OBJ_S, OBJ_M, SORTED };
 	
 	public String dataFolderPath;
 	
-	XMLdatabase flussData;
-	XMLdatabase exhibitsData;
+	// depricated:
+	private XMLdatabase 	flussData;
+	private XMLdatabase 	exhibitsData;
+	//
 	
-	XML bodenlosOS;
-	String[] objectsList;
-	String[] keywordsList;
-	RelationTable keywordRelations;
-	RelationTable objectRelationsSimple;
-	RelationTable objectRelationsMeta;
-	RelationTable sortedTable;
+	private XML 			bodenlosOS;
+	private String[] 		objectsList;
+	private String[] 		keywordsList;
+	private RelationTable 	keywordRelations;
+	private RelationTable 	objectRelationsSimple;
+	private RelationTable 	objectRelationsMeta;
+	private RelationTable 	sortedTable;
 
 	private boolean mouseMoved  = true;
 	
@@ -46,26 +54,39 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		size(800, 800);
 		colorMode(HSB);
 		
-
+		stat = new StatusGui();
+		stat.update(0, "calling startupRoutine...");
+		
+		startupRoutine();
+		stat.end();
+	}
+	
+	void startupRoutine() {
+		
+		stat.update(0, "setting folder paths");
 		File rootFolder = new File(".");
 		dataFolderPath = rootFolder.getAbsolutePath();
 		dataFolderPath = dataFolderPath.substring(0, dataFolderPath.length()-1);
 		dataFolderPath = dataFolderPath.concat("src/data/");
-		System.out.println("Data-Folder path: "+dataFolderPath);
-		
+		dprint("Data-Folder path: "+dataFolderPath);
+		stat.completed();
 				
 		
 		loadBodenlosOS();
-		getObjectsList();
+		getObjectsList( "KEYWORDED-ONLY" );
 		getKeywordsList();
 		initiateRelationTables();
-		parseKeywordRelations();
-		parseObjectRelationsSimple();
+		parseKeywordRelationsToTable();
+		parseObjectRelationsSimpleToTable();
 		
 		initializeButtons();
 
+		stat.update(0, "printing keywordsRelationTable");
 		keywordRelations.printTable();
+		stat.completed();
+		stat.update(0, "printing objectsRelationsTable");
 		objectRelationsSimple.printTable();
+		stat.completed();
 		
 		//initFlusseriana();
 		//initExhibits();		
@@ -75,14 +96,25 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		//println("...exit programm after successful run. being happy and all!");
 		//exit();
 	}
-	
 		
 	void initializeButtons() {
 		
-		buttonPanel = new Panel();
-		buttonPanel.setBounds(0, 0, width, height);
+		stat.update(0, "initializing buttons");
+
+		container = new JPanel( new GridLayout(3, 1));
+//		container = new JPanel( new BorderLayout(10, 15));
+		container.setBorder(BorderFactory.createTitledBorder("warum nicht"));
+
 		
-		visTable = new JComboBox(new Object[]{"KEYS", "OBJ_S", "OBJ_M", "SORTED"});
+		buttonPanel = new Panel();
+		//buttonPanel.setBounds(0, 0, width, height);
+		buttonPanel.setLayout(new FlowLayout());
+		buttonPanel.setBackground(Color.lightGray);
+
+		
+		visTable = new JComboBox(new Object[]{tables.KEYS, tables.OBJ_S, tables.OBJ_M, tables.SORTED});
+		visTable.addActionListener(this);
+		//visTable.setLayout(null);
 		buttonPanel.add(visTable);
 		
 		visualize = new Button("visualize");
@@ -91,16 +123,23 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		mode1 = new JRadioButton("1");
 		mode2 = new JRadioButton("2");
+		mode3 = new JRadioButton("c");
 		mode2.setSelected(true);
 		group = new ButtonGroup();
 		group.add(mode1);
 		group.add(mode2);
+		group.add(mode3);
 		buttonPanel.add(mode1);
 		buttonPanel.add(mode2);
+		buttonPanel.add(mode3);
 		
 		save_visualisation = new Button("save visualisation");
 		save_visualisation.addActionListener(this);
 		buttonPanel.add(save_visualisation);
+		
+		save_all_sorted = new Button("save all sorted");
+		save_all_sorted.addActionListener(this);
+		buttonPanel.add(save_all_sorted);
 		
 		close = new Button("close");
 		close.addActionListener(this);
@@ -110,48 +149,100 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		quit.addActionListener(this);
 		buttonPanel.add(quit);
 		
-		add(buttonPanel);
+		container.add(buttonPanel);
 		
-		visOptions = new Panel();
-		visOptions.setBounds(0, 0,  width, height);
 		
-		visOptions_type = new JComboBox(tables.values());
-		visOptions_type.addActionListener(this);
-		visOptions.add(visOptions_type);
 		
-		visOptions_focal = new JComboBox();
+		sortOptions = new Panel();
+		//sortOptions.setBounds(0, 0,  width, height);
+		sortOptions.setLayout(new FlowLayout());
+		sortOptions.setBackground(Color.MAGENTA);
+		
+		sortOptions_type = new JComboBox(tables.values());
+		sortOptions_type.addActionListener(this);
+		sortOptions.add(sortOptions_type);
+		
+		sortOptions_focal = new JComboBox();
 		DefaultComboBoxModel modl = new DefaultComboBoxModel(new String[]{"none"});
-		visOptions_focal.setModel(modl);
-		visOptions_focal.setMaximumRowCount(40);
-		visOptions_focal.addActionListener(this);
-		visOptions.add(visOptions_focal);
+		sortOptions_focal.setModel(modl);
+		sortOptions_focal.setMaximumRowCount(40);
+		sortOptions_focal.addActionListener(this);
+		sortOptions.add(sortOptions_focal);
 		
-		visOptions_go = new Button("go");
-		visOptions_go.addActionListener(this);
-		visOptions.add(visOptions_go);
+		sortOptions_go = new Button("go");
+		sortOptions_go.addActionListener(this);
+		sortOptions.add(sortOptions_go);
 		
-		add(visOptions);
+		sortOptions.setVisible(false);
+		container.add(sortOptions);
 		
+		add(container);
+		container.setVisible(true);
+		
+		//cardLayout.show(container, "buttonPanel");
+		//container.setVisible(true);
+		
+		//add(container);
+
+		
+		stat.completed();
 	}
 
 	public void actionPerformed( ActionEvent e) {
 		
 		if( e.getSource() == visualize) {
 			
-			if(visFrame == null ) {
-				
-				visFrame = new VisFrame( this, 300,300);
-				visFrame.newVisualisation();
-			}
-			else {
-				visFrame.newVisualisation();
-			}
+			visualize();
 		}
 		if( e.getSource() == save_visualisation) {
 			
-			visFrame.visApplet.saveVisualisation();
 			
+			String filename;
+			tables tableType = visFrame.visApplet.getCurrentTableType();
+			
+			switch (tableType) {
+			case KEYS:
+				
+				filename =  "KEYS_";
+				filename += visFrame.visApplet.getVismodeString();
+				filename += "-";
+				filename +=  keywordRelations.getFocal();
+				
+				visFrame.visApplet.saveVisualisation(filename);
+				break;
+				
+			case OBJ_S:
+				
+				filename  = "OBJECT-S_";
+				filename += visFrame.visApplet.getVismodeString();
+				filename += "_";
+				filename += objectRelationsSimple.getFocal();
+				
+				visFrame.visApplet.saveVisualisation(filename);
+				break;
+				
+			case SORTED:
+				
+				filename  = ""+sortedTable.getTablesType();
+				filename += "_";
+				filename += visFrame.visApplet.getVismodeString();
+				filename += "_";
+				filename += objectRelationsSimple.getFocal();
+				
+				visFrame.visApplet.saveVisualisation(filename);
+				break;
+				
+			default:
+				
+				break;
+			}
 		}
+		
+		if( e.getSource() == save_all_sorted) {
+			
+			saveAllSorted();
+		}
+		
 		if( e.getSource() == close ) { 
 
 			visFrame.visApplet.destroy();
@@ -162,34 +253,14 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			exit();
 			
 		}
-		if( e.getSource() == visOptions_type ) {
-						
-			String[] theList;
-			if(visOptions_type.getSelectedItem() == tables.KEYS) {
-				theList = keywordRelations.getValuesArrayAlphabetically();
-			}
-			else if(visOptions_type.getSelectedItem() == tables.OBJ_S) {
-				theList = objectRelationsSimple.getValuesArrayAlphabetically();
+		if( e.getSource() == sortOptions_type ) {
 
-			}
-			else if(visOptions_type.getSelectedItem() == tables.OBJ_M) {
-				theList = objectRelationsMeta.getValuesArrayAlphabetically();
-			}
-			else theList = null;
-			
-			if(theList != null) {
-				DefaultComboBoxModel modl = new DefaultComboBoxModel(theList);
-				visOptions_focal.setModel(modl);
-			}
-			else {
-				DefaultComboBoxModel modl = new DefaultComboBoxModel(new String[] {"none"});
-				visOptions_focal.setModel(modl);
-			}
+			populateTheList();
 		}
-		if( e.getSource() == visOptions_go) {
+		if( e.getSource() == sortOptions_go) {
 			
-			String focal = visOptions_focal.getSelectedItem().toString(); 
-			tables type = (tables)visOptions_type.getSelectedItem();
+			String focal = sortOptions_focal.getSelectedItem().toString(); 
+			tables type = (tables)sortOptions_type.getSelectedItem();
 			if( !focal.equalsIgnoreCase("none") ) {
 				sortRelationTable(type, focal);
 			}
@@ -200,33 +271,139 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 					    JOptionPane.WARNING_MESSAGE);
 			}
 		}
+		if( e.getSource() == visTable) {
+			
+		    visTable.getSelectedItem();
+			if( visTable.getSelectedItem() == tables.SORTED) {
+
+				sortOptions.setVisible(true);
+				
+
+			}
+			else {
+				sortOptions.setVisible(false);
+			}
+			dprint("vistable changed");
+		}
 		
+	}
+
+	private void visualize() {
+		
+		if(visFrame == null ) {
+			
+			visFrame = new VisFrame( this, 800,800);
+			visFrame.newVisualisation();
+		}
+		else {
+			visFrame.newVisualisation();
+		}		
+	}
+
+
+	void saveAllSorted() {
+
+		String vt = (String)visTable.getSelectedItem();
+		tables currentType;
+		String[] words;
+		
+		if( vt.equalsIgnoreCase("KEYS") ) {
+			words = keywordRelations.getRowValuesArrayAlphabetically();
+			currentType = tables.KEYS;
+		}
+		else if ( vt.equalsIgnoreCase("OBJ_S") ) {
+			words = objectRelationsSimple.getRowValuesArrayAlphabetically();
+			currentType = tables.OBJ_S;
+		}
+		else {
+			words = null;
+			currentType = null;
+		}
+
+		visTable.setSelectedItem("SORTED");
+
+
+		for(String currentWord : words) {
+
+				dprint("SA: sorting...");
+			sortRelationTable(currentType, currentWord);
+				dprint("SA: visualizing...");
+			visualize();
+				dprint("SA: setting title...");
+			visFrame.setTitle(currentWord);
+				dprint("SY: saving...");
+			visFrame.visApplet.saveVisualisation( currentType + " SORTED " + currentWord );
+				dprint("SA: done");
+				System.gc();
+			
+
+		}
+		
+	}
+	
+	void populateTheList() {
+		
+		String[] theList;
+		tables visopt = (tables)sortOptions_type.getSelectedItem();
+
+		switch (visopt) {
+
+		case KEYS:
+			theList = keywordRelations.getRowValuesArrayAlphabetically();
+			break;
+
+		case OBJ_S:
+			theList = objectRelationsSimple.getRowValuesArrayAlphabetically();
+			break;
+
+		case OBJ_M:
+			theList = objectRelationsMeta.getRowValuesArrayAlphabetically();
+			break;
+
+		default:
+			theList = null;
+			break;
+
+		}
+		// If objectRelations Tables fail (==null) -> reinstantiate!
+
+		if(theList != null) {
+			DefaultComboBoxModel modl = new DefaultComboBoxModel(theList);
+			sortOptions_focal.setModel(modl);
+		}
+		else {
+			DefaultComboBoxModel modl = new DefaultComboBoxModel(new String[] {"none"});
+			sortOptions_focal.setModel(modl);
+		}
 	}
 	
 	void sortRelationTable( tables type, String focal) {
 
 		switch (type) {
 		case KEYS:
-			sortedTable = new RelationTable(keywordRelations, keywordRelations.getSortedIndices(focal), focal );
+			sortedTable = new RelationTable(tables.KEYS, keywordRelations, keywordRelations.getSortedIndices(focal), focal );
 			break;
 		case OBJ_S:
-			sortedTable = new RelationTable( objectRelationsSimple, objectRelationsSimple.getSortedIndices(focal), focal );
+			sortedTable = new RelationTable( tables.OBJ_S, objectRelationsSimple, objectRelationsSimple.getSortedIndices(focal), focal );
 			break;
 		case OBJ_M:
-			sortedTable = new RelationTable( objectRelationsMeta, objectRelationsMeta.getSortedIndices(focal), focal );
+			sortedTable = new RelationTable( tables.OBJ_M, objectRelationsMeta, objectRelationsMeta.getSortedIndices(focal), focal );
 			break;
 		default:
 			break;
 		}
 		
 		//for(String a : sortedList) System.out.println(a);
-		System.out.println("sorted Table populated");
-		System.out.println();
-		sortedTable.printTable();
+		dprint("sorted Table populated");
+		dprint("");
+		//sortedTable.printTable();
 
 	}
 	
-	void parseObjectRelationsSimple() {
+	void parseObjectRelationsSimpleToTable() {
+		
+		stat.update(0, "parsing Object Relations");
+	
 		
 		String[] currentKeywords, testKeywords;
 		String currentObjectString, testObjectString;
@@ -242,13 +419,18 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			
 			int totalMatches = 0;
 			
-			System.out.println(currentObjectString);
-			System.out.println(currentKeywords.length);
-			for(String k : currentKeywords) System.out.println(k);
+			dprint(currentObjectString);
+			dprint(currentKeywords.length);
+			
+			stat.start2();
+			for(String k : currentKeywords) {
+				dprint(k);
+				stat.update2(k);
+			}
 			
 			if(currentKeywords.length >0 && currentKeywords[0] != "") {
 			
-				System.out.println("YES");
+				dprint("YES");
 				
 				for( int ii = i+1; ii<objects.length; ii++ ){
 
@@ -273,18 +455,20 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 					objectRelationsSimple.increaseRelation(currentObjectString, testObjectString, matchCount);
 					objectRelationsSimple.increaseRelation(testObjectString, currentObjectString, matchCount);
 					
-					System.out.println( currentObjectString + " matches " + testObjectString +": " + matchCount + " times.");				
+					dprint( currentObjectString + " matches " + testObjectString +": " + matchCount + " times.");				
 				}
-				System.out.println("total matches for "+currentObjectString+": "+totalMatches);
-				System.out.println();
+				dprint("total matches for "+currentObjectString+": "+totalMatches);
+				dprint("");
 			}
 		}
 		
-		
+		stat.completed();
 		
 	}
 	
-	void parseKeywordRelations() {
+	void parseKeywordRelationsToTable() {
+		
+		stat.update(0, "parsing Keyword Relations");
 		
 		String keysString;
 		String[] keysArray;
@@ -297,9 +481,10 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 				
 				keysArray = keysString.split(" ");
 				
-				for(String s : keysArray) System.out.println(s);
-				System.out.println(keysArray.length);
-				System.out.println();
+				for(String s : keysArray) dprint(s);
+				
+				dprint(keysArray.length);
+				dprint("");		
 				
 				for(int i = 0; i< keysArray.length; i++) {
 					
@@ -311,51 +496,78 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 							keywordRelations.increaseRelation(keysArray[ii], keysArray[i], 1);
 						}
 						else {
-							System.out.println("NO KEYWORDS FOUND FOR OBJECT AT INDEX:" + objIdx );
+							dprint("NO KEYWORDS FOUND FOR OBJECT AT INDEX:" + objIdx );
 						}
 					}
 				}
 			}
 		}		
+		stat.completed();
 	}
 
 	void initiateRelationTables() {
-		
-		keywordRelations 		= new RelationTable(keywordsList);
-		objectRelationsSimple 	= new RelationTable(objectsList);
-		objectRelationsMeta 	= new RelationTable(objectsList);		
+		stat.update(0, "initializing RelationTables");
+		keywordRelations 		= new RelationTable(tables.KEYS, keywordsList);
+		objectRelationsSimple 	= new RelationTable(tables.OBJ_S, objectsList);
+		objectRelationsMeta 	= new RelationTable(tables.OBJ_M, objectsList);
+		stat.completed();
 	}
 
 	void loadBodenlosOS() {
+		stat.update(0, "try reading bodenlosOS.xml");
 		try {
 			
-			//bodenlosOS = loadXML(dataFolderPath+"bodenlosOS.xml");
-			bodenlosOS = loadXML(dataFolderPath+"testDatenbank_bodenlosOS.xml");
-			
+			bodenlosOS = loadXML(dataFolderPath+"bodenlosOS.xml");
+			//bodenlosOS = loadXML(dataFolderPath+"testDatenbank_bodenlosOS.xml");
+			stat.completed();
 		} catch (Exception e) {
-			System.err.println("ERROR LOADING XML: bodenlosOS.xml");
+			stat.update(1,"ERROR LOADING XML: bodenlosOS.xml");
 			e.printStackTrace();
 			println();
-			System.err.println("PROGRAMM TERMINATED.");
+			stat.update(1,"PROGRAMM TERMINATED.");
 			exit();
 		}
 	}
 
-	void getObjectsList() {
+	void getObjectsList(String _mode) {
+		
+		stat.update(0, "getting ObjectsList");
+		
+		int mode;
+		
+		if(_mode.equalsIgnoreCase("ALL")) mode = 0;
+		else if(_mode.equalsIgnoreCase("KEYWORDED-ONLY")) mode = 1;
+		else mode = 0;
 		
 		XML resultset = bodenlosOS.getChild("RESULTSET");
 		
-		int numberOfEntries = resultset.getInt("FOUND");
-		objectsList = new String[numberOfEntries];
+		//int numberOfEntries = resultset.getInt("FOUND");
+		
+		ArrayList<String> tempObjList = new ArrayList<String>();
 		
 		int count = 0;
 		for(XML entry : resultset.getChildren()) {
-			objectsList[count] = entry.getChild(0).getChild(0).getContent();
-			count++;
+			
+			String data = entry.getChild(2).getChild(0).getContent();
+			if( (mode == 1 && !data.equalsIgnoreCase("")) || (mode == 0) ) {
+				
+				tempObjList.add(entry.getChild(0).getChild(0).getContent());
+				//objectsList[count] = entry.getChild(0).getChild(0).getContent();
+				count++;
+			}
 		}
+		
+		objectsList = new String[count];
+		tempObjList.toArray(objectsList);
+
+		dprint("mode = " + mode + " "+_mode);
+		dprint("counting: "+count);
+		stat.completed();
 	}
 	
 	void getKeywordsList() {
+		
+		stat.update(0, "getting KeywordsList");
 		
 		XML resultset = bodenlosOS.getChild("RESULTSET");
 		ArrayList<String> keys = new ArrayList<String>();
@@ -373,9 +585,12 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			}	
 		}
 		Collection<String> noDups = new HashSet<String>(keys);
-		keywordsList = noDups.toArray(new String[0]);	
-		for(String g:keywordsList	) System.out.println(g);
-		System.out.println("### END KEYWORDS LIST ###");
+		keywordsList = noDups.toArray(new String[0]);
+		
+		for(String g:keywordsList	) dprint(g);
+		dprint("### END KEYWORDS LIST ###");
+		
+		stat.completed();
 	}
 	
 	void initExhibits() {
@@ -397,7 +612,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			for(String elem:dataArray) {
 				elem = (String)elem.subSequence(1, elem.length()-1);  // Do this to get rid of the Anführungszeichen
 				exhibitsDataInt.put(elem, i++);
-				System.out.println(exhibitsDataInt.get(elem) +" "+ elem);
+				dprint(exhibitsDataInt.get(elem) +" "+ elem);
 			}
 			exhibitsData.initDataInt(exhibitsDataInt);
 
@@ -422,7 +637,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			CSVFile.close();
 
 		} catch(Exception e) {
-			System.err.println(e); e.printStackTrace();
+			dprint(e); e.printStackTrace();
 		}
 	}
 	
@@ -430,7 +645,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		XML flusseriana;
 		flusseriana = loadXML(dataFolderPath+"flusseriana_exported.xml");
-		System.out.println(flusseriana.getName());
+		dprint(flusseriana.getName());
 		
 		HashMap<String, Integer> flussDataInt = new HashMap<String, Integer>();
 		flussData = new XMLdatabase("RESULTSET");
@@ -440,16 +655,16 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		for( String s : flusseriana.listChildren()) {
 
 			XML child = flusseriana.getChild(s);
-			System.out.println(s);			
+			dprint(s);			
 
 			// set the column names:
 			if(child.getName().equalsIgnoreCase("METADATA")) {
 				Integer i=0;
 				for(XML field : child.getChildren()){
-					System.out.println(i+": "+field.getString("NAME"));
-					//System.out.println("TYPE:      "+field.getString("TYPE"));
-					//System.out.println("EMPTYOK:   "+field.getString("EMPTYOK"));
-					//System.out.println("MAXREPEAT: "+field.getString("MAXREPEAT"));
+					dprint(i+": "+field.getString("NAME"));
+					//dprint("TYPE:      "+field.getString("TYPE"));
+					//dprint("EMPTYOK:   "+field.getString("EMPTYOK"));
+					//dprint("MAXREPEAT: "+field.getString("MAXREPEAT"));
 
 					flussDataInt.put(field.getString("NAME"), i);
 					i++;
@@ -483,6 +698,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			updatePixels();
 		}
 		mouseMoved = false;
+		
 	}
 	
 	public void mouseMoved() {
@@ -512,10 +728,10 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		    visApplet.setParent(tempParent);
 		    //visApplet.visualize1(keywordRelations);
 		    
-		    setTitle("omas suppenküche");
+		    setTitle("visual");
 		    setResizable(true);
 		    //setExtendedState(JFrame.MAXIMIZED_BOTH);
-		    setUndecorated(true);
+		    setUndecorated(false);
 		    setVisible(true);
 		    setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		    //setBounds((visApplet.getBounds()));
@@ -529,38 +745,49 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		public void  newVisualisation() {
 			
-		    String s = (String)visTable.getSelectedItem();
+		    tables type = (tables)visTable.getSelectedItem();
 		    
 		    int visModeSelector = 0;
 		    if( mode1.isSelected() ) visModeSelector = 1;
 		    if( mode2.isSelected() ) visModeSelector = 2;
+		    if( mode3.isSelected() ) visModeSelector = 3;
 			   
-		    
-		    if(s.equalsIgnoreCase("KEYS")) 	{
-		    	if (keywordRelations != null) {
+		    switch (type) {
+			
+		    case KEYS:
+				if (keywordRelations != null) {
 					visApplet.visualize(keywordRelations, visModeSelector);
 				}
-		    }
-
-		    if(s.equalsIgnoreCase("OBJ_S"))	 {
-		    	if (objectRelationsSimple != null) {
+				break;
+			
+			case OBJ_S:
+				if (objectRelationsSimple != null) {
 					visApplet.visualize(objectRelationsSimple, visModeSelector);
 				}
-		    }
-
-		    if(s.equalsIgnoreCase("OBJ_M"))		{
-		    	if (objectRelationsMeta != null) {
+				break;
+			
+			case OBJ_M:
+				if (objectRelationsMeta != null) {
 					visApplet.visualize(objectRelationsMeta, visModeSelector);
 				}
-		    }
-
-		    if(s.equalsIgnoreCase("SORTED")){
-		    	if (sortedTable != null) {
+				break;
+				
+			case SORTED:
+				if (sortedTable != null) {
 					visApplet.visualize(sortedTable, visModeSelector);
 				}
-		    }
+				break;
+				
+				
+			default:
+				break;
+			}
+
 		}
 	}
-
+	
+	private void dprint(Object _p) {
+		if( debug ) System.err.println(_p);
+	}
 }
 

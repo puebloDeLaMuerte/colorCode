@@ -2,20 +2,26 @@ package colorcodetst;
 
 import java.util.*;
 
+import colorcodetst.ColorCodeTST.tables;
+
 
 public class RelationTable {
 
+	private boolean debug = false;
+	
 	private LinkedHashMap<String, LinkedHashMap<String, Integer>> table;
 	private LinkedHashMap<Integer, String> index_col;
 	private LinkedHashMap<Integer, String> index_row;
+	private tables myType;
 	private String focal;
 	
-	RelationTable( String[] terms ) {
+	RelationTable( tables _Type, String[] terms ) {
 		
 		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(terms.length,1);
 		index_col = new LinkedHashMap<Integer, String>(terms.length, 1);
 		index_row = new LinkedHashMap<Integer, String>(terms.length, 1);
-		focal = null;
+		focal = "UNSORTED";
+		myType = _Type;
 		
 		// fill the outer Map with new inner maps (+index)
 		for(int i=0; i<terms.length; i++) {
@@ -33,47 +39,65 @@ public class RelationTable {
 		
 	}
 	
-	RelationTable( RelationTable originTable, String[] order, String _focal) {
+	RelationTable( tables _Type, RelationTable originTable, String[] order, String _focal) {
 		
 		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(order.length,1);
 		index_col = new LinkedHashMap<Integer, String>(order.length, 1);
 		index_row = new LinkedHashMap<Integer, String>(order.length, 1);
 		focal = _focal;
 		
-		// set up the rows-index from order[]
-		for(int i = 0; i<order.length; i++ ) {
-			index_row.put(i, order[i]);
-		}
-		
-		// set up the index for columns from original table
-		index_col = originTable.getIndex();
-		
-		// put empty rows into table for later poputating them with values
-		for(int i=0; i<order.length; i++) {
-			 table.put(order[i], new LinkedHashMap<String, Integer>(order.length, 1));
-		}
-		
-		/* fill each row with the relation-values. 
-		 * The iteration order being taken from index_col
-		 */
-		int c = 0;
-		for (LinkedHashMap<String,Integer> row : table.values()) {
-			for(int i=0; i<index_col.size(); i++) {
-				row.put(index_col.get(i), originTable.getRelation(order[c], index_col.get(i)));
+		if( _Type == tables.SORTED ){
+			
+			System.err.println("TYPE CANNOT BE 'SORTED'");
+			
+		} else {
+			
+			myType = _Type;
+
+			// set up the rows-index from order[]
+			for(int i = 0; i<order.length; i++ ) {
+				index_row.put(i, order[i]);
 			}
-			c++;
+
+			// set up the index for columns from original table
+			index_col = originTable.getColumnIndex();
+
+			// put empty rows into table for later poputating them with values
+			for(int i=0; i<order.length; i++) {
+				table.put(order[i], new LinkedHashMap<String, Integer>(order.length, 1));
+			}
+
+			/* fill each row with the relation-values. 
+			 * The iteration order being taken from index_col
+			 */
+			int c = 0;
+			for (LinkedHashMap<String,Integer> row : table.values()) {
+				for(int i=0; i<index_col.size(); i++) {
+					row.put(index_col.get(i), originTable.getRelation(order[c], index_col.get(i)));
+				}
+				c++;
+			}		
 		}
-		
 	}
-	
+
 	
 	void increaseRelation( String term1, String term2, int increment ) {
 		
-		int current = table.get(term1).get(term2);
-		table.get(term1).put(term2, current+increment);
+		dprint("gettingRelation for "+term1+" "+term2);
+		
+		if( !table.containsKey(term1) ) dprint( term1 +" NOT FOUND IN TABLE");
+		else if ( !table.get(term1).containsKey(term2) ) dprint(term2 +" NOT FOUND IN TABLE"); 
+		else {
+			int current = table.get(term1).get(term2);
+			table.get(term1).put(term2, current+increment);
+		}
 		
 	}
 
+	public tables getTablesType() {
+		return myType;
+	}
+	
 	int getRelation( String term1, String term2 ) {
 		
 		return table.get(term1).get(term2);
@@ -84,7 +108,7 @@ public class RelationTable {
 		return getRelation( index_row.get(row), index_col.get(col) );
 	}
 	
-	int getSize() {
+	int getRowSize() {
 		return index_row.size();
 	}
 
@@ -95,8 +119,8 @@ public class RelationTable {
 	}
 	*/
 	
-	String[] getValuesArrayAlphabetically() {
-		String[] a = index_row.values().toArray(new String[getSize()]);
+	String[] getRowValuesArrayAlphabetically() {
+		String[] a = index_row.values().toArray(new String[getRowSize()]);
 		Arrays.sort(a);
 		return a;
 	}
@@ -114,7 +138,7 @@ public class RelationTable {
 		
 		System.out.println("...........................................................................");
 		
-		if( focal != null) System.out.println("This is a sorted relationTable. The focal is: "+focal);
+		if( focal != null) dprint("This is a sorted relationTable. The focal is: "+focal);
 		
 		// Hunderter nach rechts antragen
 		System.out.print("                ");
@@ -220,6 +244,10 @@ public class RelationTable {
 		
 		int max = getMaxValueFor(focal);
 		
+		if( max == 0 ) {
+			dprint("THERE IS NO VALUES FOR THIS FOCAL !!");
+		}
+		
 		for (int m = max; m >= 0; m--) {
 			
 			int tst;
@@ -233,27 +261,76 @@ public class RelationTable {
 		return returnList.toArray(new String[returnList.size()]);
 	}
 	
-	LinkedHashMap<Integer, String> getIndex() {
+	LinkedHashMap<Integer, String> getColumnIndex() {
 		
 		return index_col;
 	}
 
-	int getMaxValueFor(String focal) {
+	public String getTermByIndex(String _XY, int _idx) {
+		
+		String term;
+		
+		if( _XY.equalsIgnoreCase("column")) {
+			
+			term = index_col.get(_idx);
+		}
+		
+		else if( _XY.equalsIgnoreCase("row")) {
+			
+			term = index_row.get(_idx);
+		}
+		
+		else term = null;
+		
+		return term;
+	}
+	
+	int getMaxValueFor(String _focal) {
 		
 		int mx = 0;
 		int tst;
 		for(int i=0; i<index_col.size(); i++) {
 			
-			if ( ! index_col.get(i).equalsIgnoreCase(focal)) {
-				tst = table.get(focal).get(index_col.get(i));
+			if ( ! index_col.get(i).equalsIgnoreCase(_focal)) {
+				tst = table.get(_focal).get(index_col.get(i));
 				if (mx < tst)
 					mx = tst;
 			}
 		}
-		
+				
 		return mx;
 	}
 
+	int getMaxValueTotal() {
+
+		int mx = 0;
+		int tst;
+
+		for( LinkedHashMap<String, Integer> row : table.values() ) {
+			
+			for(int i=0; i<index_col.size(); i++) {
+
+
+				tst = row.get(index_col.get(i));
+				if (mx < tst)
+					mx = tst;
+
+			}
+		}
+
+		return mx;
+	}
+
+	String getFocal() {
+		
+		if(focal != null && !focal.equalsIgnoreCase("")) return focal;
+		else if( focal != null && focal.equalsIgnoreCase("") ) return "unsorted table";
+		else return "focal: null";
+	}
+	
+	private void dprint(Object _p) {
+		if( debug ) System.err.println(_p);
+	}
 }
 
 

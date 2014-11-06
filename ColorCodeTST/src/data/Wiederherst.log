@@ -1,5 +1,0 @@
-﻿Zeitstempel	Dateiname	Fehler	Meldung
-2014-03-06 18:36:52.000 +0100	bodenlos OS.fmp12	0	*** Konsistenzprüfung der falsch geschlossenen Datei gestartet, insgesamt 36 Blöcke zu prüfen
-2014-03-06 18:36:52.001 +0100	bodenlos OS.fmp12	8432	Seite 36 als frei markiert, aber nicht in Freiliste
-2014-03-06 18:36:52.001 +0100	bodenlos OS.fmp12	0	Maximale Blocksequenznummer auf 9324 zurücksetzen
-2014-03-06 18:36:52.002 +0100	bodenlos OS.fmp12	0	*** Konsistenzprüfung abgeschlossen, 36 Blöcke geprüft
