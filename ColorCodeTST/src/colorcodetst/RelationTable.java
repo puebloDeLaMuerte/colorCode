@@ -2,20 +2,26 @@ package colorcodetst;
 
 import java.util.*;
 
-import colorcodetst.ColorCodeTST.tables;
+import MyUtils.StatusGui;
+import MyUtils.TableTypes;
 
 
 public class RelationTable {
 
-	private boolean debug = false;
+	private boolean debug = true;
 	
 	private LinkedHashMap<String, LinkedHashMap<String, Integer>> table;
 	private LinkedHashMap<Integer, String> index_col;
 	private LinkedHashMap<Integer, String> index_row;
-	private tables myType;
+	private String[] pathForFocal_S;
+	private int[] pathForFocal_I;
+	private TableTypes myType;
 	private String focal;
+	private ColorCodeTST parent;
 	
-	RelationTable( tables _Type, String[] terms ) {
+	RelationTable( ColorCodeTST _parent, TableTypes _Type, String[] terms ) {
+		
+		parent = _parent;
 		
 		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(terms.length,1);
 		index_col = new LinkedHashMap<Integer, String>(terms.length, 1);
@@ -39,14 +45,16 @@ public class RelationTable {
 		
 	}
 	
-	RelationTable( tables _Type, RelationTable originTable, String[] order, String _focal) {
+	RelationTable( ColorCodeTST _parent, TableTypes _Type, RelationTable originTable, String[] order, String _focal) {
+		
+		parent = _parent;
 		
 		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(order.length,1);
 		index_col = new LinkedHashMap<Integer, String>(order.length, 1);
 		index_row = new LinkedHashMap<Integer, String>(order.length, 1);
 		focal = _focal;
 		
-		if( _Type == tables.SORTED ){
+		if( _Type == TableTypes.SORTED ){
 			
 			System.err.println("TYPE CANNOT BE 'SORTED'");
 			
@@ -81,7 +89,7 @@ public class RelationTable {
 	}
 
 	
-	void increaseRelation( String term1, String term2, int increment ) {
+	public void increaseRelation( String term1, String term2, int increment ) {
 		
 		dprint("gettingRelation for "+term1+" "+term2);
 		
@@ -94,38 +102,56 @@ public class RelationTable {
 		
 	}
 
-	public tables getTablesType() {
+	public TableTypes getTablesType() {
 		return myType;
 	}
 	
-	int getRelation( String term1, String term2 ) {
+	public String getTablesTypeAsString() {
+		return myType.toString();
+	}
+	
+	public int getRelation( String term1, String term2 ) {
 		
 		return table.get(term1).get(term2);
 	}
 	
-	int getRelationByIndex( int row, int col ) {
+	public int getRelationByIndex( int row, int col ) {
 		
 		return getRelation( index_row.get(row), index_col.get(col) );
 	}
 	
-	int getRowSize() {
+	public int getRowIndexForString( String _in ) {
+		
+		int count = 0;
+		for(String s : index_row.values()) if( s.equalsIgnoreCase(_in)) break;	
+		return count;
+	}
+	
+	public int getColIndexForString( String _in ) {
+
+		int count = 0;
+		for(String s : index_col.values()) if( s.equalsIgnoreCase(_in)) break;	
+		return count;
+	}
+	
+	public int getRowSize() {
 		return index_row.size();
 	}
 
-	/* Auskommentiert um zu sehen wo es Ÿberhaut aufgerufen wird...
+	/* Auskommentiert 
 	 * 
 	String[] getValuesArray() {
 		return index.values().toArray(new String[getSize()]);
 	}
 	*/
 	
-	String[] getRowValuesArrayAlphabetically() {
+	public String[] getRowValuesArrayAlphabetically() {
 		String[] a = index_row.values().toArray(new String[getRowSize()]);
 		Arrays.sort(a);
 		return a;
 	}
 	
-	/*  Auskommentiert um zu sehen, wo es Ÿberhaupt jemals aufgerufen wird
+	/*  Auskommentiert 
 	 *  
 	 
 	LinkedHashMap<String, Integer> getRelationMapFor(String focal ) {
@@ -134,7 +160,79 @@ public class RelationTable {
 	}
 	*/
 	
-	void printTable() {
+	public void findPathForFocal( String _focal, int maximumPathDepth) {
+		
+		//TODO: handle the case where nothing is found (indx still is -1)
+		
+		dprint("");
+		dprint("");
+		dprint("");
+		dprint("#####################################");
+		dprint("finding path for" + _focal);
+		dprint("#####################################");
+		
+		parent.stat = new StatusGui();
+		parent.stat.update(0, "finding path for" + _focal);
+		
+		
+		ArrayList<String> path = new ArrayList<String>();
+		int []topRelatedIdcs;
+		int nextTermIdx = -1;
+		
+		String currentFocal = _focal;
+		path.add(_focal);
+
+		while( path.size() < maximumPathDepth){
+			
+			//topRelatedIdcs = getMostRelatedIndices(currentFocal, path);
+			topRelatedIdcs = getLeastRelatedIndices(currentFocal, path);
+			
+			if( topRelatedIdcs.length > 0 ) {
+
+				if( topRelatedIdcs.length == 1) { 		// if there's a single top related term, set it as NEXT
+					nextTermIdx = topRelatedIdcs[0];
+				}
+				if( topRelatedIdcs.length > 1) {		// if there's more equally related ones, see who's most relatet in total and set this as NEXT
+					int currentTopIdx = -1;					// use the latest and highest, no sensitive choice if multiple most related values
+					int currentTopVal = 0;
+					for( int i : topRelatedIdcs) {
+						int x = getTotalRelatednes( index_col.get(i));
+						if( x > currentTopVal) {
+							currentTopIdx = i;
+							currentTopVal = x;
+						}
+					}
+					nextTermIdx  = currentTopIdx;
+				}
+				path.add(index_col.get(nextTermIdx));
+			} else {
+				
+				break;  // if no topRelated is found (does it happen?
+				
+			}
+			currentFocal = index_col.get(nextTermIdx);
+			
+			if( index_col.get(nextTermIdx).equalsIgnoreCase(_focal)){
+				
+				dprint("path reached its own focal after " + path.size() +" steps.");
+				break;
+			}
+
+			parent.stat.update2("current path size: "+path.size());
+		}
+		parent.stat.completed();
+
+		focal = _focal;
+		pathForFocal_S = path.toArray(new String[path.size()]);
+		
+		dprint("path length: "+path.size());
+		for( String s : path) {
+			dprint(s);
+		}
+		parent.stat.end();
+	}
+	
+	public void printTable() {
 		
 		System.out.println("...........................................................................");
 		
@@ -236,7 +334,6 @@ public class RelationTable {
 		
 		System.out.println("...........................................................................");
 	}
-
 	
 	public String[] getSortedIndices(String focal) {
 		
@@ -261,7 +358,7 @@ public class RelationTable {
 		return returnList.toArray(new String[returnList.size()]);
 	}
 	
-	LinkedHashMap<Integer, String> getColumnIndex() {
+	public LinkedHashMap<Integer, String> getColumnIndex() {
 		
 		return index_col;
 	}
@@ -285,7 +382,97 @@ public class RelationTable {
 		return term;
 	}
 	
-	int getMaxValueFor(String _focal) {
+	private int getTotalRelatednes( String _term ) {
+		
+		LinkedHashMap<String, Integer> row = table.get(_term);
+		int count = 0;
+		
+		for( Integer x : row.values() ) {
+			count += x;
+		}
+		
+		return count;
+	}
+	
+	private int[] getMostRelatedIndices(String _focal, ArrayList<String> _lastFocals) {
+		
+		int[] returnArray;
+		ArrayList<Integer> values = new ArrayList<Integer>();
+
+		LinkedHashMap<String, Integer> row = table.get(_focal);
+		int mx = 0;
+		int tst;
+		
+		// finding top values
+		for(int i=0; i<index_col.size(); i++) {
+
+			boolean isAlreadyInPath = false;
+			for(String s : _lastFocals) {
+				
+				if( s.equalsIgnoreCase(index_col.get(i))) isAlreadyInPath = true;
+			}
+			if( ! index_row.get(i).equalsIgnoreCase(_focal) && !isAlreadyInPath) {  // if you're not yourself or already in the list
+
+				tst = row.get(index_col.get(i));
+				if( tst > mx) {
+					mx = tst;
+					values = new ArrayList<Integer>();
+					values.add(i);
+				} else
+				if( tst == mx ) {
+					values.add(i);
+				}
+			}
+		}
+
+		// convert ArrayList into Array
+		returnArray = new int[values.size()];
+		for(int i = 0; i < values.size(); i++) {
+			returnArray[i]  = values.get(i); 
+		}
+		return returnArray;
+	}
+	
+	private int[] getLeastRelatedIndices(String _focal, ArrayList<String> _lastFocals) {
+		
+		int[] returnArray;
+		ArrayList<Integer> values = new ArrayList<Integer>();
+
+		LinkedHashMap<String, Integer> row = table.get(_focal);
+		int min = getMaxValueFor(_focal);
+		int tst;
+		
+		// finding top values
+		for(int i=0; i<index_col.size(); i++) {
+
+			boolean isAlreadyInPath = false;
+			for(String s : _lastFocals) {
+				
+				if( s.equalsIgnoreCase(index_col.get(i))) isAlreadyInPath = true;
+			}
+			if( ! index_row.get(i).equalsIgnoreCase(_focal) && !isAlreadyInPath) {  // if you're not yourself or already in the list
+
+				tst = row.get(index_col.get(i));
+				if( tst < min) {
+					min = tst;
+					values = new ArrayList<Integer>();
+					values.add(i);
+				} else
+				if( tst == min ) {
+					values.add(i);
+				}
+			}
+		}
+
+		// convert ArrayList into Array
+		returnArray = new int[values.size()];
+		for(int i = 0; i < values.size(); i++) {
+			returnArray[i]  = values.get(i); 
+		}
+		return returnArray;
+	}
+	
+	public int getMaxValueFor(String _focal) {
 		
 		int mx = 0;
 		int tst;
@@ -301,7 +488,7 @@ public class RelationTable {
 		return mx;
 	}
 
-	int getMaxValueTotal() {
+	public int getMaxValueTotal() {
 
 		int mx = 0;
 		int tst;
@@ -321,11 +508,21 @@ public class RelationTable {
 		return mx;
 	}
 
-	String getFocal() {
+	public String getFocal() {
 		
 		if(focal != null && !focal.equalsIgnoreCase("")) return focal;
 		else if( focal != null && focal.equalsIgnoreCase("") ) return "unsorted table";
 		else return "focal: null";
+	}
+	
+	public boolean hasPath() {
+		
+		if( pathForFocal_S != null) return true;
+		else return false;
+	}
+	
+ 	public String[] getPath() {
+		return pathForFocal_S;
 	}
 	
 	private void dprint(Object _p) {
