@@ -1,24 +1,21 @@
 package colorcodetst;
 
-import java.awt.Dimension;
-import java.awt.MouseInfo;
+
 import java.io.File;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
-import com.sun.tools.javac.comp.Todo;
-import com.sun.xml.internal.bind.v2.TODO;
 
 import MyUtils.StatusGui;
 import MyUtils.VisModes;
+import MyUtils.TableTypes;
 
 import processing.core.PApplet;
 import processing.core.PFont;
 import processing.core.PGraphics;
 import processing.core.PImage;
 import processing.core.PVector;
-import MyUtils.TableTypes;
 
 public class VisApplet extends PApplet implements VisInterface{
 	
@@ -28,6 +25,9 @@ public class VisApplet extends PApplet implements VisInterface{
 	private ColorCodeTST pa;
 	private int mouseXOffset, mouseYOffset;
 	private PGraphics display;
+	
+	private RelationTable tableToVisualize = null;
+	private boolean doNewVisualisation = false;
 	
 	public void setup() {
 		
@@ -45,7 +45,20 @@ public class VisApplet extends PApplet implements VisInterface{
 		{	
 			image(display,0,0,width, height);
 		}
-		else System.err.println("vis seems to be NULL...");
+		else System.out.println("vis seems to be NULL...");
+		
+		
+		if(doNewVisualisation && tableToVisualize != null) {
+			vis.visualize(tableToVisualize);
+			tableToVisualize = null;
+		}
+		
+		if( doNewVisualisation && tableToVisualize == null && vis != null && vis.hasVisual() ) {
+			
+			display = vis.getVisualisationGraphics();
+			doNewVisualisation = false;
+		}
+		
 	}
 	
 	public void mouseWheel(int delta) {
@@ -96,24 +109,57 @@ public class VisApplet extends PApplet implements VisInterface{
 		else return null;
 	}
 
-	public void setVisMode() {
+	public void setVisualisationParams(VisModes _mode) {
 		
+		if( vis == null || vis.getVisMode() != _mode ) changeVisMode(_mode);
+	}
+	
+	private void changeVisMode( VisModes _mode ) {
 		
+		switch (_mode) {
+		case GRID_HARD:
+			vis = new GridHard();
+			break;
+		case GRID_SOFT:
+			vis = new GridSoft();
+			break;
+		case CIRCULAR:
+			vis = new Circular();
+			break;
+		case PATH:
+			vis = new Path();
+			break;
+		case NEBULAR:
+			vis = new Nebular();
+			break;
+
+		default:
+			break;
+		}
 	}
 	
 	@Override
 	public void visualize(RelationTable _table) {
-		// TODO check the parameters and start the visInterface-based process
+		tableToVisualize = _table;
+		doNewVisualisation = true;
 	}
 
 	@Override
 	public boolean saveVisualisation(boolean _askForName, String _suggestedName) {
-		if( vis != null ) {
+		if( vis != null && vis.hasVisual() ) {
 			return vis.saveVisualisation(_askForName, _suggestedName);
 		}
 		else return false;
 	}	
 
+	public PGraphics getVisualisationGraphics() {
+		return null;
+	}
+	
+	private void setVisualisationGraphics( PGraphics _g) {
+		display = _g;
+	}
+	
 	
 	//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||
 
@@ -124,14 +170,24 @@ public class VisApplet extends PApplet implements VisInterface{
 
 		private String myVismodeString = "nebular";
 		private VisModes myVismode = VisModes.NEBULAR;
+		private TableTypes myTablesType;
+		private boolean visBool = false;
+		private RelationTable myTable;
+		private PGraphics graphics;
+
 		
 		public Nebular(){
 			
 			System.out.println("Neb established");
 		}
 		
-		public void doIt() {
-			System.out.println("Neb sayin' hi");
+		private void prepareIt(RelationTable _table){
+			myTable = _table;
+			
+			
+		}
+		
+		private void doIt() {
 		}
 		
 		
@@ -139,6 +195,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 			private String myTerm, myLove;
 			private int myLoveLevel;
+			
 			
 			public Element( String _myTerm, String _myLove, int _loveLevel) {
 				
@@ -150,7 +207,10 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 		}
 
-
+		
+		
+		////////////
+		
 		@Override
 		public void sayHello() {
 			// TODO Auto-generated method stub
@@ -177,8 +237,15 @@ public class VisApplet extends PApplet implements VisInterface{
 
 		@Override
 		public void visualize(RelationTable _table) {
-			// TODO Auto-generated method stub
+			visBool = false;
+	 		myTablesType = _table.getTablesType();
 			
+	 		prepareIt(_table);
+			doIt();
+	 		
+			frame.setTitle( _table.getTablesTypeAsString()+" focal: "+_table.getFocal());
+			visBool = true;
+			System.out.println("DONE DONE DONE RIGHT");			
 		}
 
 		@Override
@@ -194,6 +261,10 @@ public class VisApplet extends PApplet implements VisInterface{
 			return null;
 		}
 
+		public PGraphics getVisualisationGraphics() {
+			if( visBool) return graphics;
+			else return null;
+		}
 
 		
 	}
@@ -211,17 +282,21 @@ public class VisApplet extends PApplet implements VisInterface{
 		private String myVismodeString = "grid soft";
 		private VisModes myVismode = VisModes.GRID_SOFT;
 		private TableTypes myTablesType;
-		PImage brush;
+		private PImage brush;
 		private PGraphics graphics;
 		//private PGraphics show;
 		
 		PFont fnt;
 		
+		public GridSoft(){
+			initialize();
+		}
+		
 		public void sayHello() {
 			System.out.println("Hello, this is the softGridDrawer module "+this.toString());
 		}
 		
-		public void setup() {
+		public void initialize() {
 			VisApplet.this.frameRate(6);
 			System.out.println("setup run");
 			System.out.println("getting brush at " + pa.dataFolderPath+"brush1.png");
@@ -231,10 +306,10 @@ public class VisApplet extends PApplet implements VisInterface{
 			graphics = createGraphics(100, 100);
 			String fontpath = pa.dataFolderPath+"Perfect DOS VGA 437.ttf";
 			System.out.println("getting font at: " + fontpath);
-			
+
 			File rootFolder = new File(".");
 			System.out.println(rootFolder.getAbsolutePath());
-			
+
 			fnt = createFont(fontpath, cellSize-2, true);
 
 			if( fnt == null ) {
@@ -244,15 +319,14 @@ public class VisApplet extends PApplet implements VisInterface{
 				System.err.println("pFont successfully created");
 				graphics.textFont(fnt);
 			}
-			
+
 			brush = loadImage(pa.dataFolderPath+"brush1.png");
 			if(brush == null) { System.err.println("NO BRUSH"); exit(); }
-			
-			 VisApplet.this.addMouseWheelListener(new java.awt.event.MouseWheelListener() {
-				 public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
-				 mouseWheel(evt.getWheelRotation());
-				 }}); 
-			noLoop();
+
+			VisApplet.this.addMouseWheelListener(new java.awt.event.MouseWheelListener() {
+				public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
+					mouseWheel(evt.getWheelRotation());
+				}}); 
 			VisApplet.this.background(0);
 		}
 		
@@ -274,23 +348,25 @@ public class VisApplet extends PApplet implements VisInterface{
 			drawGridSoft(_table);
 	 		
 			frame.setTitle( _table.getTablesTypeAsString()+" focal: "+_table.getFocal());
-			
+			visBool = true;
+			System.out.println("DONE DONE DONE RIGHT");
 		}
 				
 		private void drawGridSoft(RelationTable _table) {
 			
-
+			pa.stat = new StatusGui();
+			pa.stat.update(0, "generating one hell of a visualisation");
 			
 			int cellSize = 12;
 			int noOfCells = _table.getRowSize();
 			int xySize = 200 + ( cellSize * noOfCells );
 
-			graphics = createGraphics(xySize, xySize);
+			this.graphics = createGraphics(xySize, xySize);
 			brush = loadImage(pa.dataFolderPath+"brush1.png");
 			
-			graphics.beginDraw();
-			graphics.background(bg);
-			graphics.noStroke();
+			this.graphics.beginDraw();
+			this.graphics.background(bg);
+			this.graphics.noStroke();
 
 			//vis.image(brush,200,200);
 			
@@ -299,15 +375,16 @@ public class VisApplet extends PApplet implements VisInterface{
 					
 					//vis.fill(  230-(_table.getRelationByIndex(x, y)*10)  );
 					//vis.rect(100+(x*(cellSize)), 100+(y*(cellSize)), cellSize, cellSize);
-					graphics.tint(255, _table.getRelationByIndex(x, y)*2 );
-					graphics.image(brush,40+(x*(cellSize)), 40+(y*(cellSize)));
+					this.graphics.tint(255, _table.getRelationByIndex(x, y)*2 );
+					this.graphics.image(brush,40+(x*(cellSize)), 40+(y*(cellSize)));
 					
 				}
 			}
 			
 			
-			graphics.endDraw();
+			this.graphics.endDraw();
 			//show = vis;
+			pa.stat.end();
 			visBool = true;
 		}
 				
@@ -343,14 +420,17 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		@Override
 		public boolean hasVisual() {
-			// TODO Auto-generated method stub
-			return false;
+			return visBool;
 		}
 
 		public VisModes getVisMode() {
 			return myVismode;
 		}
 		
+		public PGraphics getVisualisationGraphics() {
+			if( visBool) return graphics;
+			else return null;
+		}
 	}
 
 	public class GridHard implements VisInterface{
@@ -366,12 +446,15 @@ public class VisApplet extends PApplet implements VisInterface{
 		private String myVismodeString = "gridHard";
 		private VisModes myVismode = VisModes.GRID_HARD;
 		private TableTypes myTablesType;
-		PImage brush;
 		private PGraphics graphics;
 		//private PGraphics show;
 		
 		PFont fnt;
 
+		public GridHard() {
+			this.sayHello();
+			initializeParams();
+		}
 		
 		public void sayHello() {
 			System.out.println("Hello, this is the HardGridDrawer module "+this.toString());
@@ -402,14 +485,10 @@ public class VisApplet extends PApplet implements VisInterface{
 				graphics.textFont(fnt);
 			}
 			
-			brush = loadImage(pa.dataFolderPath+"brush1.png");
-			if(brush == null) { System.err.println("NO BRUSH"); exit(); }
-			
 			 VisApplet.this.addMouseWheelListener(new java.awt.event.MouseWheelListener() {
 				 public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
 				 mouseWheel(evt.getWheelRotation());
 				 }}); 
-			noLoop();
 			VisApplet.this.background(0);
 		}
 		
@@ -431,10 +510,14 @@ public class VisApplet extends PApplet implements VisInterface{
 			drawGridHard(_table);
 	 		
 			frame.setTitle( _table.getTablesTypeAsString()+" focal: "+_table.getFocal());
-			
+			visBool = true;
+			System.out.println("DONE DONE DONE DONE DONE DONE");
 		}
 		
 		private void drawGridHard(RelationTable _table) {
+			
+			pa.stat = new StatusGui();
+			pa.stat.update(0, "generating one hell of a visualisation");
 			
 			//int maxTint = pa.keywordsList.length;
 
@@ -444,23 +527,25 @@ public class VisApplet extends PApplet implements VisInterface{
 
 			int xySize = margin + ( cellSize * noOfCells );
 
-			graphics = createGraphics(100, 100);
+			this.graphics = createGraphics(100, 100);
 			fnt = createFont("Perfect DOS VGA 437.ttf", cellSize-2, true);
 
-			graphics.setSize(xySize, xySize);
-			graphics.textFont(fnt);
+			this.graphics.setSize(xySize, xySize);
+			
+			//this.graphics.setSize(190, 190);
+			this.graphics.textFont(fnt);
 
 
 			
-			graphics.beginDraw();
-			graphics.background(bg);
-			graphics.noStroke();
+			this.graphics.beginDraw();
+			this.graphics.background(bg);
+			this.graphics.noStroke();
 
-			graphics.pushMatrix();
-			graphics.fill(0);
-			graphics.rotate(HALF_PI/2);
-			graphics.text( _table.getFocal(), 20,0);
-			graphics.popMatrix();
+			this.graphics.pushMatrix();
+			this.graphics.fill(0);
+			this.graphics.rotate(HALF_PI/2);
+			this.graphics.text( _table.getFocal(), 20,0);
+			this.graphics.popMatrix();
 			
 			String term;
 
@@ -469,12 +554,12 @@ public class VisApplet extends PApplet implements VisInterface{
 				term = _table.getTermByIndex("column", x);
 				if(term.length()>8) term = term.substring(0, 8);
 				
-				graphics.pushMatrix();
-				graphics.translate((margin/2)+2+(x*cellSize), 10);
-				graphics.rotate(HALF_PI);
-				graphics.fill(0);
-				graphics.text(term, 0,0);
-				graphics.popMatrix();
+				this.graphics.pushMatrix();
+				this.graphics.translate((margin/2)+2+(x*cellSize), 10);
+				this.graphics.rotate(HALF_PI);
+				this.graphics.fill(0);
+				this.graphics.text(term, 0,0);
+				this.graphics.popMatrix();
 				
 				
 				for(int y = 0; y<noOfCells; y++) {
@@ -482,18 +567,19 @@ public class VisApplet extends PApplet implements VisInterface{
 					
 					if(x==0) {
 						term = _table.getTermByIndex("row", y);
-						graphics.fill(0);
-						graphics.text(term, 10, (margin/2)+(cellSize-2)+(y*cellSize));
+						this.graphics.fill(0);
+						this.graphics.text(term, 10, (margin/2)+(cellSize-2)+(y*cellSize));
 					}
 					
-					graphics.fill(  map(_table.getRelationByIndex(y, x), 0, maxTint, 255, 0)  );
-					graphics.rect((margin/2)+(x*(cellSize)), (margin/2)+(y*(cellSize)), cellSize, cellSize);
+					this.graphics.fill(  map(_table.getRelationByIndex(y, x), 0, maxTint, 255, 0)  );
+					this.graphics.rect((margin/2)+(x*(cellSize)), (margin/2)+(y*(cellSize)), cellSize, cellSize);
 				}
 			}
 			
 			
-			graphics.endDraw();
+			this.graphics.endDraw();
 			//show = vis;
+			pa.stat.end();
 			visBool = true;
 		}
 		
@@ -529,8 +615,7 @@ public class VisApplet extends PApplet implements VisInterface{
 
 	 	@Override
 	 	public boolean hasVisual() {
-	 		// TODO Auto-generated method stub
-	 		return false;
+	 		return visBool;
 	 	}
 
 	 	@Override
@@ -538,6 +623,10 @@ public class VisApplet extends PApplet implements VisInterface{
 	 		return myVismode;
 	 	}
 
+		public PGraphics getVisualisationGraphics() {
+			if( visBool) return graphics;
+			else return null;
+		}
 
 	}
 	
@@ -549,12 +638,16 @@ public class VisApplet extends PApplet implements VisInterface{
 		private String myVismodeString = "circular";
 		private VisModes myVismode = VisModes.CIRCULAR;
 		private TableTypes myTablesType;
-		PImage brush;
+		private PImage brush;
 		private PGraphics graphics;
 		//private PGraphics show;
 		
 		PFont fnt;
 
+		public Circular() {
+			initializeParams();
+		}
+		
 		public void sayHello() {
 			System.out.println("Hello, this is the CircularVisualisationDrawerModule "+this.toString());
 		}
@@ -591,7 +684,6 @@ public class VisApplet extends PApplet implements VisInterface{
 				 public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
 				 mouseWheel(evt.getWheelRotation());
 				 }}); 
-			noLoop();
 			VisApplet.this.background(0);
 		}
 		
@@ -746,6 +838,10 @@ public class VisApplet extends PApplet implements VisInterface{
 			return myVismode;
 		}
 
+		public PGraphics getVisualisationGraphics() {
+			if( visBool) return graphics;
+			else return null;
+		}
 	}
 
 	public class Path implements VisInterface{
@@ -757,12 +853,16 @@ public class VisApplet extends PApplet implements VisInterface{
 		private String myVismodeString = "path";
 		private VisModes myVismode = VisModes.PATH;
 		private TableTypes myTablesType;
-		PImage brush;
+		private PImage brush;
 		private PGraphics graphics;
 		//private PGraphics show;
 		
 		PFont fnt;
 
+		public Path() {
+			initializeParams();
+		}
+		
 		public void sayHello() {
 			System.out.println("Hello, this is the PathDrawer "+this.toString());
 		}
@@ -799,7 +899,6 @@ public class VisApplet extends PApplet implements VisInterface{
 				 public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
 				 mouseWheel(evt.getWheelRotation());
 				 }}); 
-			noLoop();
 			VisApplet.this.background(0);
 		}
 		
@@ -955,6 +1054,10 @@ public class VisApplet extends PApplet implements VisInterface{
 			return myVismode;
 		}
 
+		public PGraphics getVisualisationGraphics() {
+			if( visBool) return graphics;
+			else return null;
+		}
 	}
 
 

@@ -1,5 +1,6 @@
 package colorcodetst;
 
+import processing.core.PGraphics;
 import MyUtils.TableTypes;
 import MyUtils.VisModes;
 
@@ -21,5 +22,5 @@ public interface VisInterface{
 	
 	public boolean saveVisualisation(boolean _askForName, String _suggestedName);
 
-	
+	public PGraphics getVisualisationGraphics();
 }

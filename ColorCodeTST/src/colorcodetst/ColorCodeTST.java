@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.io.*;
 import java.util.*;
 import javax.swing.*;
+import javax.swing.table.TableStringConverter;
 
 import processing.core.PApplet;
 import processing.core.PFont;
@@ -119,7 +120,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		//container.setBorder(BorderFactory.createTitledBorder("warum nicht"));
 		//container.setOpaque(true);
 		
-		visTable = new JComboBox(new Object[]{TableTypes.KEYS, TableTypes.OBJ_S, TableTypes.OBJ_M, TableTypes.SORTED});
+		visTable = new JComboBox(new TableTypes[]{TableTypes.KEYS, TableTypes.OBJ_S, TableTypes.OBJ_M, TableTypes.SORTED});
 		visTable.addActionListener(this);
 		
 		visualize = new Button("visualize");
@@ -838,47 +839,33 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		public void  newVisualisation() {
 			
-			
+			visApplet.setVisualisationParams(currentVisMode);
 
-		    /*
-		    int visModeSelector = 0;
-		    if( mode1.isSelected() ) visModeSelector = 1;
-		    if( mode2.isSelected() ) visModeSelector = 2;
-		    if( mode3.isSelected() ) visModeSelector = 3;
-		    if( mode4.isSelected() ) visModeSelector = 4;
-		    if( mode5.isSelected() ) visModeSelector = 5;
+			TableTypes type = (TableTypes)visTable.getSelectedItem();
 			   
 		    switch (type) {
 			
 		    case KEYS:
 				if (keywordRelations != null) {
-					
-					if(visModeSelector == 5) nebularApplet.doIt();
-					else visApplet.visualize(keywordRelations, visModeSelector);
+					visApplet.visualize(keywordRelations);
 				}
 				break;
 			
 			case OBJ_S:
 				if (objectRelationsSimple != null) {
-					
-					if(visModeSelector == 5) nebularApplet.doIt();
-					else visApplet.visualize(objectRelationsSimple, visModeSelector);
+					visApplet.visualize(objectRelationsSimple);
 				}
 				break;
 			
 			case OBJ_M:
 				if (objectRelationsMeta != null) {
-					
-					if(visModeSelector == 5) nebularApplet.doIt();
-					else visApplet.visualize(objectRelationsMeta, visModeSelector);
+					visApplet.visualize(objectRelationsMeta);
 				}
 				break;
 				
 			case SORTED:
 				if (sortedTable != null) {
-					
-					if(visModeSelector == 5) nebularApplet.doIt();
-					else visApplet.visualize(sortedTable, visModeSelector);
+					visApplet.visualize(sortedTable);
 				}
 				break;
 				
@@ -886,7 +873,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			default:
 				break;
 			}
-*/
+
 		}
 	
 	}
