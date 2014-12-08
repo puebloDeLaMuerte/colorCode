@@ -1,10 +1,13 @@
 package colorcodetst;
 
 
+import java.awt.Color;
 import java.io.File;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+
+import java.util.LinkedHashMap;
 
 
 import MyUtils.StatusGui;
@@ -16,6 +19,7 @@ import processing.core.PFont;
 import processing.core.PGraphics;
 import processing.core.PImage;
 import processing.core.PVector;
+import processing.event.MouseEvent;
 
 public class VisApplet extends PApplet implements VisInterface{
 	
@@ -25,6 +29,10 @@ public class VisApplet extends PApplet implements VisInterface{
 	private ColorCodeTST pa;
 	private int mouseXOffset, mouseYOffset;
 	private PGraphics display;
+	private int frameCount = 0;
+	private int mousePX, mousePY;
+	//private long timeSinceLastDraw;
+	//private long timeOfLastDraw;
 	
 	private RelationTable tableToVisualize = null;
 	private boolean doNewVisualisation = false;
@@ -52,13 +60,20 @@ public class VisApplet extends PApplet implements VisInterface{
 			vis.visualize(tableToVisualize);
 			tableToVisualize = null;
 		}
-		
 		if( doNewVisualisation && tableToVisualize == null && vis != null && vis.hasVisual() ) {
 			
 			display = vis.getVisualisationGraphics();
 			doNewVisualisation = false;
 		}
 		
+		if( frameCount != 0 && vis != null && vis.getVisMode() == VisModes.NEBULAR ) {
+			
+			vis.updateFrame();
+			display = vis.getVisualisationGraphics();
+			//System.out.println("frame updated");
+		}
+		
+		frameCount++;
 	}
 	
 	public void mouseWheel(int delta) {
@@ -88,6 +103,10 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 	}
 
+	public void updateFrame(){
+		
+	}
+	
 	@Override
 	public String getVismodeString() {
 		if( vis != null ) {
@@ -160,6 +179,32 @@ public class VisApplet extends PApplet implements VisInterface{
 		display = _g;
 	}
 	
+	@Override
+	public void setDisplayZoomValue(float _zoom) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setDisplayOffset(int _xOffset, int _Yoffset) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void mouseWheel(MouseEvent event) {
+		float e = event.getCount();
+		if(vis != null) vis.setDisplayZoomValue(e);
+	}
+	
+	public void mousePressed(MouseEvent e){
+		mousePX = e.getX();
+		mousePY = e.getY();
+	}
+	
+	public void mouseDragged(MouseEvent e){
+		if(vis != null) vis.setDisplayOffset(e.getX()-mousePX, e.getY()-mousePY);
+	}
+
 	
 	//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||
 
@@ -175,6 +220,17 @@ public class VisApplet extends PApplet implements VisInterface{
 		private RelationTable myTable;
 		private PGraphics graphics;
 
+		private float zoomfactor = 1;
+		private int xOffset = 0, yOffset = 0;
+		
+		private Element[] elements;
+		private float maxPosition;
+		
+		private float maximumInitialSpread = 80;
+		private float maximumDrawSpread = 200;
+		private float influenceFactor = (float)0.00005;
+		//private float influenceFactor = (float)0.005;
+		private int visualisationSize = 1300;
 		
 		public Nebular(){
 			
@@ -182,57 +238,213 @@ public class VisApplet extends PApplet implements VisInterface{
 		}
 		
 		private void prepareIt(RelationTable _table){
+			
 			myTable = _table;
 			
+			// create the Elements
+			
+			//elements = new Element[myTable.getRowSize()*myTable.getRowSize()];
+			elements = new Element[myTable.getRowSize()];
+			int elemCount = 0;
+			LinkedHashMap<Integer, String> idx_col = myTable.getColumnIndex();
+			LinkedHashMap<Integer, String> idx_row = myTable.getRowIndex();
+			
+			for( int r=0; r<idx_row.size(); r++) {
+				
+				String currentRowTerm = idx_row.get(r);
+				
+				Color theColor = new Color((int)random(40,200), (int)random(40,200), (int)random(40,200));
+				
+				
+				elements[r] = new Element(
+						currentRowTerm, 
+						"", 
+						0,
+						theColor
+					);
+				
+				/*
+				for( int c=0; c<idx_col.size(); c++) {
+					
+					elements[elemCount] = new Element(
+														currentRowTerm, 
+														idx_col.get(c), 
+														myTable.getRelationByIndex(r, c), 
+														theColor
+													);
+					
+					elemCount++;
+				}
+				*/
+				
+			}
 			
 		}
 		
-		private void doIt() {
+		public void updateFrame() {
+			
+			for( Element e : elements) {
+				e.findDirection();
+			}
+			maxPosition = 0;
+			for( Element e : elements) {
+				e.move();
+			}
+			drawIt();
+			//timeSinceLastDraw = millis() - timeOfLastDraw;
+			//System.err.println("time: "+timeSinceLastDraw);
+			//timeOfLastDraw = millis();
+			
+			//saveVisualisation(false, myTablesType+"_"+"PointCloud_frame"+frameCount);
 		}
 		
+		private void drawIt() {
+			
+			//maximumDrawSpread = maxPosition;
+			
+			this.graphics = createGraphics(10, 10);
+			this.graphics.setSize(visualisationSize	, visualisationSize);
+			this.graphics.beginDraw();
+			
+			this.graphics.background(255);
+			
+			this.graphics.pushMatrix();
+			this.graphics.translate(this.graphics.width/2, this.graphics.height/2);
+			
+			for(Element e: elements) {
+				
+				this.graphics.stroke(e.myColor.getRGB());
+				//this.graphics.point(mappedPos(e.getXpos()), mappedPos(e.getYpos()));
+				this.graphics.ellipse(mappedXPos(e.getXpos())-1, mappedYPos(e.getYpos())-1, 3, 3);
+				this.graphics.line(0,0,mappedXPos(e.getXpos()), mappedYPos(e.getYpos()));
+				
+			}
+			this.graphics.popMatrix();
+			this.graphics.fill(0);
+			this.graphics.text("frameCount: "+frameCount, 20, 20);
+			
+			this.graphics.endDraw();
+			
+		}
+		
+		int mappedXPos(float _in ){
+			
+			return (int)map(_in, 0, maxPosition, 0+xOffset, zoomfactor*((visualisationSize/2)-150)+xOffset );
+		}
+		
+		int mappedYPos(float _in ){
+			
+			return (int)map(_in, 0, maxPosition, 0+yOffset, zoomfactor*((visualisationSize/2)-150)+yOffset );
+		}
 		
 		private class Element {
 			
 			private String myTerm, myLove;
 			private int myLoveLevel;
+			private PVector myPos, myDirection;
+			private Color myColor;
 			
 			
-			public Element( String _myTerm, String _myLove, int _loveLevel) {
+			public Element( String _myTerm, String _myLove, int _loveLevel, Color _color) {
 				
 				myTerm = _myTerm;
 				myLove = _myLove;
 				myLoveLevel = _loveLevel;
+				
+				SetNewRandomPosition();
+				
+				myColor = _color;
+				
+				//System.out.println("pos: "+ myPos.x +" / "+myPos.y + "  "+myTerm);
 			}
 			
+			private void SetNewRandomPosition() {
+				PVector newRandomPosition = PVector.fromAngle((float)random(TWO_PI));
+				newRandomPosition.normalize();
+				newRandomPosition.setMag(random(maximumInitialSpread));
+				myPos = newRandomPosition; 
+			}
+			
+			public void findDirection() {
+				
+				myDirection = new PVector(0,0);
+				
+				for( Element e : elements) {
+					
+					PVector thisInfluence = new PVector(e.getPos().x, e.getPos().y);					
+					thisInfluence.sub(myPos);
+					thisInfluence.normalize();
+					
+					float thisInfluenceMag;
+					int thisRelation = myTable.getRelation(myTerm, e.getTerm());
+					
+					if( thisRelation == 0 ) {
+						thisInfluenceMag = (float)-0.1;
+					}
+					else {
+						thisInfluenceMag = thisRelation;
+					}
+					
+					// TODO take into account the special love i have
+					// TODO take into account the others special love
+					
+					thisInfluence.mult(thisInfluenceMag);
+					thisInfluence.mult(influenceFactor);
+					
+					myDirection.add(thisInfluence);
+					
+				}
+				
+			}
+			
+			public void move() {
+				
+				myPos.add(myDirection);
+				if( abs(myPos.x) > abs(maxPosition) ) maxPosition = abs(myPos.x);
+				if( abs(myPos.y) > abs(maxPosition) ) maxPosition = abs(myPos.y);
+			}
+			
+			public String getTerm(){
+				return myTerm;
+			}
+			
+			public PVector getPos() {
+				return myPos;
+			}
+			
+ 			public float getXpos() {
+				return myPos.x;
+			}
+			
+			public float getYpos() {
+				return myPos.y;
+			}
 			
 		}
-
 		
 		
 		////////////
 		
 		@Override
 		public void sayHello() {
-			// TODO Auto-generated method stub
-			
+
+			System.out.println("this is the Nebular visualisation modul sayin hi");
 		}
 
 		@Override
 		public boolean hasVisual() {
-			// TODO Auto-generated method stub
-			return false;
+			return visBool;
 		}
 
 		@Override
 		public String getVismodeString() {
-			// TODO Auto-generated method stub
-			return null;
+			return myVismodeString;
 		}
 
 		@Override
 		public TableTypes getCurrentTableType() {
-			// TODO Auto-generated method stub
-			return null;
+
+			return myTablesType;
 		}
 
 		@Override
@@ -240,8 +452,11 @@ public class VisApplet extends PApplet implements VisInterface{
 			visBool = false;
 	 		myTablesType = _table.getTablesType();
 			
+
 	 		prepareIt(_table);
-			doIt();
+			
+			drawIt();
+
 	 		
 			frame.setTitle( _table.getTablesTypeAsString()+" focal: "+_table.getFocal());
 			visBool = true;
@@ -251,19 +466,55 @@ public class VisApplet extends PApplet implements VisInterface{
 		@Override
 		public boolean saveVisualisation(boolean _askForName,
 				String _suggestedName) {
-			// TODO Auto-generated method stub
-			return false;
+			if(graphics != null) {
+				//System.out.println("SICHER IST SICHER");
+				
+				String input;
+				if (_askForName) {
+					input = JOptionPane.showInputDialog("please input filename", _suggestedName);
+				}
+				else {
+					input = _suggestedName;
+				}
+				
+				if( input == null ) { return false; }
+				
+				if( input != null ) {
+					graphics.save(pa.dataFolderPath+input+".jpg");
+					//vis.save(input+".jpg");
+					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
+					
+				}
+				return true;
+			}
+			else {
+				System.err.println("NO VISUALISATION TO SAVE");
+				return false;
+			}
 		}
 
 		@Override
 		public VisModes getVisMode() {
-			// TODO Auto-generated method stub
-			return null;
+			return myVismode;
 		}
 
 		public PGraphics getVisualisationGraphics() {
 			if( visBool) return graphics;
 			else return null;
+		}
+
+		@Override
+		public void setDisplayZoomValue(float _zoom) {
+			
+			zoomfactor += _zoom/2;
+			if(zoomfactor <= 0) zoomfactor = (float)0.5;
+		}
+
+		@Override
+		public void setDisplayOffset(int _xOffset, int _Yoffset) {
+			xOffset += _xOffset/2;
+			yOffset += _Yoffset/2;
+			
 		}
 
 		
@@ -430,6 +681,24 @@ public class VisApplet extends PApplet implements VisInterface{
 		public PGraphics getVisualisationGraphics() {
 			if( visBool) return graphics;
 			else return null;
+		}
+
+		@Override
+		public void updateFrame() {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void setDisplayZoomValue(float _zoom) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void setDisplayOffset(int _xOffset, int _Yoffset) {
+			// TODO Auto-generated method stub
+			
 		}
 	}
 
@@ -626,6 +895,24 @@ public class VisApplet extends PApplet implements VisInterface{
 		public PGraphics getVisualisationGraphics() {
 			if( visBool) return graphics;
 			else return null;
+		}
+
+		@Override
+		public void updateFrame() {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void setDisplayZoomValue(float _zoom) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void setDisplayOffset(int _xOffset, int _Yoffset) {
+			// TODO Auto-generated method stub
+			
 		}
 
 	}
@@ -841,6 +1128,24 @@ public class VisApplet extends PApplet implements VisInterface{
 		public PGraphics getVisualisationGraphics() {
 			if( visBool) return graphics;
 			else return null;
+		}
+
+		@Override
+		public void updateFrame() {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void setDisplayZoomValue(float _zoom) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void setDisplayOffset(int _xOffset, int _Yoffset) {
+			// TODO Auto-generated method stub
+			
 		}
 	}
 
@@ -1058,7 +1363,24 @@ public class VisApplet extends PApplet implements VisInterface{
 			if( visBool) return graphics;
 			else return null;
 		}
-	}
 
+		@Override
+		public void updateFrame() {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void setDisplayZoomValue(float _zoom) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void setDisplayOffset(int _xOffset, int _Yoffset) {
+			// TODO Auto-generated method stub
+			
+		}
+	}
 
 }

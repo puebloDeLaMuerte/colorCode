@@ -8,7 +8,7 @@ import MyUtils.TableTypes;
 
 public class RelationTable {
 
-	private boolean debug = true;
+	private boolean debug = false;
 	
 	private LinkedHashMap<String, LinkedHashMap<String, Integer>> table;
 	private LinkedHashMap<Integer, String> index_col;
@@ -132,6 +132,11 @@ public class RelationTable {
 		int count = 0;
 		for(String s : index_col.values()) if( s.equalsIgnoreCase(_in)) break;	
 		return count;
+	}
+	
+	public LinkedHashMap<String, Integer> getRowByTerm(String _term) {
+		
+		return table.get(_term);
 	}
 	
 	public int getRowSize() {
@@ -363,6 +368,10 @@ public class RelationTable {
 		return index_col;
 	}
 
+	public LinkedHashMap<Integer, String> getRowIndex() {
+		return index_row;
+	}
+	
 	public String getTermByIndex(String _XY, int _idx) {
 		
 		String term;
@@ -507,7 +516,7 @@ public class RelationTable {
 
 		return mx;
 	}
-
+	
 	public String getFocal() {
 		
 		if(focal != null && !focal.equalsIgnoreCase("")) return focal;

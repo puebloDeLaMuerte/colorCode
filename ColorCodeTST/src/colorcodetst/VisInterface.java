@@ -20,7 +20,13 @@ public interface VisInterface{
 	
 	public void visualize(RelationTable _table);
 	
+	public void updateFrame();
+	
 	public boolean saveVisualisation(boolean _askForName, String _suggestedName);
 
 	public PGraphics getVisualisationGraphics();
+	
+	public void setDisplayZoomValue(float _zoom);
+	
+	public void setDisplayOffset(int _xOffset, int _Yoffset);
 }
