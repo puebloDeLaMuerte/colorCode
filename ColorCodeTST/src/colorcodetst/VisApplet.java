@@ -7,6 +7,7 @@ import java.io.File;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 
@@ -36,10 +37,12 @@ public class VisApplet extends PApplet implements VisInterface{
 	
 	private RelationTable tableToVisualize = null;
 	private boolean doNewVisualisation = false;
+	private boolean pauseToggle;
 	
 	public void setup() {
 		
 		size(frame.getWidth(), frame.getHeight());
+		//frameRate(1);
 		
 	}
 	
@@ -52,6 +55,16 @@ public class VisApplet extends PApplet implements VisInterface{
 		else if ( display != null )
 		{	
 			image(display,0,0,width, height);
+			
+			if(pauseToggle) {
+				pushStyle();
+				noStroke();
+				fill(240,10,20);
+				rect(30,30,6,17);
+				rect(40,30,6,17);
+				popStyle();
+			}
+			
 		}
 		else System.out.println("vis seems to be NULL...");
 		
@@ -68,7 +81,8 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		if( frameCount != 0 && vis != null && vis.getVisMode() == VisModes.NEBULAR ) {
 			
-			vis.updateFrame();
+			if(!pauseToggle) vis.updateFrame();
+			vis.drawFrame();
 			display = vis.getVisualisationGraphics();
 			//System.out.println("frame updated");
 		}
@@ -191,6 +205,12 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 	}
 
+	@Override
+	public void drawFrame() {
+		// TODO Auto-generated method stub
+
+	}
+
 	public void mouseWheel(MouseEvent event) {
 		float e = event.getCount();
 		if(vis != null) vis.setDisplayZoomValue(e);
@@ -203,9 +223,19 @@ public class VisApplet extends PApplet implements VisInterface{
 	
 	public void mouseDragged(MouseEvent e){
 		if(vis != null) vis.setDisplayOffset(e.getX()-mousePX, e.getY()-mousePY);
+		mousePX = e.getX();
+		mousePY = e.getY();
 	}
 
+	public void keyPressed() {
+		
+		if( key == ' ') {
+			pauseToggle = !pauseToggle;
+		}
+	}
 	
+	
+		
 	//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||
 
 	
@@ -228,9 +258,14 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		private float maximumInitialSpread = 80;
 		private float maximumDrawSpread = 200;
-		private float influenceFactor = (float)0.00005;
-		//private float influenceFactor = (float)0.005;
+		//private float influenceFactor = (float)0.00000005;
+		private float influenceFactor = (float)0.0005;
+		//private float influenceFactor = (float)15;
+//		private float repulsionRate = -0.6f;
+		private float repulsionRate = -4.6f;
 		private int visualisationSize = 1300;
+		
+		private int saveFrameCount = 0;
 		
 		public Nebular(){
 			
@@ -239,46 +274,85 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		private void prepareIt(RelationTable _table){
 			
+			this.graphics = createGraphics(10, 10);
+			this.graphics.setSize(visualisationSize	, visualisationSize);
+			this.graphics.beginDraw();
+			this.graphics.background(255);
+			this.graphics.endDraw();
+			
 			myTable = _table;
 			
 			// create the Elements
 			
-			//elements = new Element[myTable.getRowSize()*myTable.getRowSize()];
-			elements = new Element[myTable.getRowSize()];
-			int elemCount = 0;
-			LinkedHashMap<Integer, String> idx_col = myTable.getColumnIndex();
-			LinkedHashMap<Integer, String> idx_row = myTable.getRowIndex();
+			LinkedHashMap<Integer, String> idx_col;
+			LinkedHashMap<Integer, String> idx_row;
+			int elemCount;
 			
-			for( int r=0; r<idx_row.size(); r++) {
+
+			//  Put multiple Elements for visualisation
+			if( true ) {
 				
-				String currentRowTerm = idx_row.get(r);
-				
-				Color theColor = new Color((int)random(40,200), (int)random(40,200), (int)random(40,200));
-				
-				
-				elements[r] = new Element(
-						currentRowTerm, 
-						"", 
-						0,
-						theColor
-					);
-				
-				/*
-				for( int c=0; c<idx_col.size(); c++) {
-					
-					elements[elemCount] = new Element(
-														currentRowTerm, 
-														idx_col.get(c), 
-														myTable.getRelationByIndex(r, c), 
-														theColor
-													);
-					
-					elemCount++;
+				ArrayList<Element> elementsList = new ArrayList<VisApplet.Nebular.Element>();
+				//elements = new Element[myTable.getRowSize()*myTable.getRowSize()];
+
+				elemCount = 0;
+				idx_col = myTable.getColumnIndex();
+				idx_row = myTable.getRowIndex();
+
+				for( int r=0; r<idx_row.size(); r++) {
+
+					String currentRowTerm = idx_row.get(r);
+
+					Color theColor = new Color((int)random(40,200), (int)random(40,200), (int)random(40,200));
+
+
+					for( int c=0; c<idx_col.size(); c++) {
+
+						int rel = myTable.getRelationByIndex(r, c);
+						
+						if(rel != 0 ) {
+							elementsList.add( new Element(		
+									currentRowTerm, 
+									idx_col.get(c), 
+									rel, 
+									theColor,
+									elemCount
+									));
+
+							elemCount++;
+						}
+					}
+
 				}
-				*/
-				
+				elements = elementsList.toArray(new Element[elemCount]);
 			}
-			
+
+			//   Put only single Elemnts for visualisation
+			else {
+				
+				elements = new Element[myTable.getRowSize()];
+				elemCount = 0;
+				idx_col = myTable.getColumnIndex();
+				idx_row = myTable.getRowIndex();
+
+				for( int r=0; r<idx_row.size(); r++) {
+
+					String currentRowTerm = idx_row.get(r);
+
+					Color theColor = new Color((int)random(40,200), (int)random(40,200), (int)random(40,200));
+
+
+					elements[r] = new Element(
+							currentRowTerm, 
+							"", 
+							0,
+							theColor,
+							r
+							);
+				}
+
+			}
+
 		}
 		
 		public void updateFrame() {
@@ -290,51 +364,72 @@ public class VisApplet extends PApplet implements VisInterface{
 			for( Element e : elements) {
 				e.move();
 			}
-			drawIt();
+
 			//timeSinceLastDraw = millis() - timeOfLastDraw;
 			//System.err.println("time: "+timeSinceLastDraw);
 			//timeOfLastDraw = millis();
 			
-			//saveVisualisation(false, myTablesType+"_"+"PointCloud_frame"+frameCount);
+			saveVisualisation(false, myTablesType+"_"+"PointCloud_frame"+nfs(saveFrameCount++, 5));
+		}
+		
+		public void drawFrame() {
+			drawIt();
 		}
 		
 		private void drawIt() {
 			
 			//maximumDrawSpread = maxPosition;
 			
-			this.graphics = createGraphics(10, 10);
-			this.graphics.setSize(visualisationSize	, visualisationSize);
+			//this.graphics = createGraphics(10, 10);
+			//this.graphics.setSize(visualisationSize	, visualisationSize);
 			this.graphics.beginDraw();
 			
 			this.graphics.background(255);
 			
 			this.graphics.pushMatrix();
 			this.graphics.translate(this.graphics.width/2, this.graphics.height/2);
+			this.graphics.stroke(0);
+			if( false ) {
+				
+				// draw crosshair
+				
+				this.graphics.line(10, 0, 20, 0);
+				this.graphics.line(-10, 0, -20, 0);
+				this.graphics.line(0, 10, 0, 20);
+				this.graphics.line(0, -10, 0, -20);
+			}
+			
+			this.graphics.noStroke();
 			
 			for(Element e: elements) {
 				
-				this.graphics.stroke(e.myColor.getRGB());
+				//this.graphics.stroke(e.myColor.getRGB());
+				this.graphics.fill(e.myColor.getRGB(), 160);
 				//this.graphics.point(mappedPos(e.getXpos()), mappedPos(e.getYpos()));
-				this.graphics.ellipse(mappedXPos(e.getXpos())-1, mappedYPos(e.getYpos())-1, 3, 3);
-				this.graphics.line(0,0,mappedXPos(e.getXpos()), mappedYPos(e.getYpos()));
+				//this.graphics.ellipse(mappedXPos(e.getXpos())-1, mappedYPos(e.getYpos())-1, 3, 3);
+				//this.graphics.fill(e.myColor.getRGB(), 70);
+				this.graphics.ellipse(mappedXPos(e.getXpos())-2, mappedYPos(e.getYpos())-2, 5, 5);
+
+				//this.graphics.line(0,0,mappedXPos(e.getXpos()), mappedYPos(e.getYpos()));
 				
 			}
 			this.graphics.popMatrix();
 			this.graphics.fill(0);
 			this.graphics.text("frameCount: "+frameCount, 20, 20);
-			
 			this.graphics.endDraw();
 			
 		}
 		
 		int mappedXPos(float _in ){
-			
+						
 			return (int)map(_in, 0, maxPosition, 0+xOffset, zoomfactor*((visualisationSize/2)-150)+xOffset );
+
 		}
 		
 		int mappedYPos(float _in ){
 			
 			return (int)map(_in, 0, maxPosition, 0+yOffset, zoomfactor*((visualisationSize/2)-150)+yOffset );
+
 		}
 		
 		private class Element {
@@ -343,55 +438,80 @@ public class VisApplet extends PApplet implements VisInterface{
 			private int myLoveLevel;
 			private PVector myPos, myDirection;
 			private Color myColor;
+			private int myID;
 			
 			
-			public Element( String _myTerm, String _myLove, int _loveLevel, Color _color) {
+			public Element( String _myTerm, String _myLove, int _loveLevel, Color _color, int _id) {
+				
+				myID = _id;
 				
 				myTerm = _myTerm;
 				myLove = _myLove;
 				myLoveLevel = _loveLevel;
 				
-				SetNewRandomPosition();
+				myDirection = new PVector(0,0);
+				
+				//myPos = setNewCircularRandomPosition();
+				myPos = setNewSquaredRandomPosition();
 				
 				myColor = _color;
 				
 				//System.out.println("pos: "+ myPos.x +" / "+myPos.y + "  "+myTerm);
 			}
 			
-			private void SetNewRandomPosition() {
+			private PVector setNewCircularRandomPosition() {
 				PVector newRandomPosition = PVector.fromAngle((float)random(TWO_PI));
 				newRandomPosition.normalize();
 				newRandomPosition.setMag(random(maximumInitialSpread));
-				myPos = newRandomPosition; 
+				return newRandomPosition; 
+			}
+			
+			private PVector setNewSquaredRandomPosition() {
+				
+				return new PVector( random(-maximumInitialSpread, maximumInitialSpread), random(-maximumInitialSpread, maximumInitialSpread) );
+				
 			}
 			
 			public void findDirection() {
 				
-				myDirection = new PVector(0,0);
+				//myDirection.mult((float)0.5);
 				
 				for( Element e : elements) {
 					
-					PVector thisInfluence = new PVector(e.getPos().x, e.getPos().y);					
-					thisInfluence.sub(myPos);
-					thisInfluence.normalize();
 					
-					float thisInfluenceMag;
-					int thisRelation = myTable.getRelation(myTerm, e.getTerm());
-					
-					if( thisRelation == 0 ) {
-						thisInfluenceMag = (float)-0.1;
-					}
-					else {
-						thisInfluenceMag = thisRelation;
-					}
 					
 					// TODO take into account the special love i have
 					// TODO take into account the others special love
 					
-					thisInfluence.mult(thisInfluenceMag);
-					thisInfluence.mult(influenceFactor);
+					if ( myID != e.getID() && !myTerm.equalsIgnoreCase(e.getTerm())) {
 					
-					myDirection.add(thisInfluence);
+						PVector thisInfluenceDirection = new PVector(e.getPos().x, e.getPos().y);
+						thisInfluenceDirection.sub(myPos);
+						
+						float thisDistance = thisInfluenceDirection.magSq();
+						//thisDistance = thisDistance*thisDistance;
+						
+						if( thisDistance < (maximumDrawSpread/12) ) {
+
+							thisInfluenceDirection.normalize();
+
+							float thisInfluenceMag;
+							float thisRelation = (float) myTable.getRelation( myTerm, e.getTerm());
+							float thisRelationSquared = (float) thisRelation * thisRelation;
+
+							if (thisRelation == 0) {
+								thisInfluenceMag = (float) repulsionRate;
+							} else {
+
+								//thisInfluenceMag = thisRelation;
+								thisInfluenceMag = (float) influenceFactor * thisRelationSquared / thisDistance;
+
+							}
+							thisInfluenceDirection.mult(thisInfluenceMag);
+							//thisInfluenceDirection.mult(influenceFactor);
+							myDirection.add(thisInfluenceDirection);
+						}
+					}
 					
 				}
 				
@@ -400,6 +520,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			public void move() {
 				
 				myPos.add(myDirection);
+				
 				if( abs(myPos.x) > abs(maxPosition) ) maxPosition = abs(myPos.x);
 				if( abs(myPos.y) > abs(maxPosition) ) maxPosition = abs(myPos.y);
 			}
@@ -420,6 +541,9 @@ public class VisApplet extends PApplet implements VisInterface{
 				return myPos.y;
 			}
 			
+			public int getID() {
+				return myID;
+			}
 		}
 		
 		
@@ -506,14 +630,14 @@ public class VisApplet extends PApplet implements VisInterface{
 		@Override
 		public void setDisplayZoomValue(float _zoom) {
 			
-			zoomfactor += _zoom/2;
-			if(zoomfactor <= 0) zoomfactor = (float)0.5;
+			zoomfactor += _zoom/4;
+			if(zoomfactor <= 0) zoomfactor = (float)0.1;
 		}
 
 		@Override
 		public void setDisplayOffset(int _xOffset, int _Yoffset) {
-			xOffset += _xOffset/2;
-			yOffset += _Yoffset/2;
+			xOffset += _xOffset;
+			yOffset += _Yoffset;
 			
 		}
 
@@ -700,6 +824,14 @@ public class VisApplet extends PApplet implements VisInterface{
 			// TODO Auto-generated method stub
 			
 		}
+
+		@Override
+		public void drawFrame() {
+			// TODO Auto-generated method stub
+			
+		}
+
+		
 	}
 
 	public class GridHard implements VisInterface{
@@ -911,6 +1043,12 @@ public class VisApplet extends PApplet implements VisInterface{
 
 		@Override
 		public void setDisplayOffset(int _xOffset, int _Yoffset) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void drawFrame() {
 			// TODO Auto-generated method stub
 			
 		}
@@ -1147,6 +1285,13 @@ public class VisApplet extends PApplet implements VisInterface{
 			// TODO Auto-generated method stub
 			
 		}
+
+		@Override
+		public void drawFrame() {
+			// TODO Auto-generated method stub
+			
+		}
+
 	}
 
 	public class Path implements VisInterface{
@@ -1381,6 +1526,18 @@ public class VisApplet extends PApplet implements VisInterface{
 			// TODO Auto-generated method stub
 			
 		}
+
+		@Override
+		public void drawFrame() {
+			// TODO Auto-generated method stub
+			
+		}
+
+
 	}
+
+	
+
+
 
 }

@@ -24,6 +24,10 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 	
 	public boolean debug = true;
 	
+	private MenuBar mb;
+	private Menu mn1, mn2;
+	private MenuItem itm1, itm2, itm3, itm4, itm5;
+	
 	private JPanel				container;
 	private Panel 				subContainer;
 	
@@ -58,6 +62,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 
 	private boolean mouseMoved  = true;
 	
+	
 	public void setup() {
 
 		size(800, 800);
@@ -89,6 +94,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		parseObjectRelationsSimpleToTable();
 		
 		initializeButtons();
+		initializeMenus();
 
 		stat.update(0, "printing keywordsRelationTable");
 		keywordRelations.printTable();
@@ -106,6 +112,25 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		//exit();
 	}
 		
+	private void initializeMenus() {
+		
+		mb = new MenuBar();
+		mn1 = new Menu("Datei");
+		itm1 = new MenuItem("šffnen");
+		itm2 = new MenuItem("speichern unter...");
+		itm3 = new MenuItem("mšglich, aber nicht nštig");
+		mn1.add(itm1);
+		mn1.add(itm2);
+		mn1.addSeparator();
+		mn1.add(itm3);
+		
+		mb.add(mn1);
+		
+		
+		
+		this.frame.setMenuBar(mb);
+	}
+	
 	void initializeButtons() {
 		
 		stat.update(0, "initializing buttons");

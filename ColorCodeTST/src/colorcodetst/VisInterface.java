@@ -29,4 +29,6 @@ public interface VisInterface{
 	public void setDisplayZoomValue(float _zoom);
 	
 	public void setDisplayOffset(int _xOffset, int _Yoffset);
+	
+	public void drawFrame();
 }
