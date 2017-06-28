@@ -269,7 +269,7 @@ public class RelationTable {
 		for( int i=0; i< index_col.size();i++) System.out.print("| ");
 		System.out.println();
 		
-		// Die abgekŸrzten Begriffe nach rechts antragen - erste Zeile, jeder 2te Begriff
+		// Die abgekï¿½rzten Begriffe nach rechts antragen - erste Zeile, jeder 2te Begriff
 		System.out.print("                ");
 		for( int i=0; i< index_col.size();i++) {
 			if(i%2==0) {
@@ -287,7 +287,7 @@ public class RelationTable {
 		}
 		System.out.println();
 		
-		// Die andere HŠlfte der Begriffe nach rechts antraen
+		// Die andere Hï¿½lfte der Begriffe nach rechts antraen
 		System.out.print("                ");
 		System.out.print(" ");
 		for( int i=0; i< index_col.size();i++) {
@@ -329,7 +329,7 @@ public class RelationTable {
 			// Die Daten
 			for(Integer value : row.values()) {
 		    	if(value==0) str = ".";
-		    	else if(value>=10) str = "¥";
+		    	else if(value>=10) str = "+";
 		    	else str = value.toString();
 		    	System.out.print(str+" ");
 		    }

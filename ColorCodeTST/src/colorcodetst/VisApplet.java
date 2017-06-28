@@ -257,15 +257,27 @@ public class VisApplet extends PApplet implements VisInterface{
 		private float maxPosition;
 		
 		private float maximumInitialSpread = 80;
-		private float maximumDrawSpread = 200;
+		
+//		private float maximumDrawSpread = 200;
+		private float maximumDrawSpread = 17;
+//		private float maximumDrawSpread = 1199800;
+		
 		//private float influenceFactor = (float)0.00000005;
 		private float influenceFactor = (float)0.0005;
 		//private float influenceFactor = (float)15;
-//		private float repulsionRate = -0.6f;
-		private float repulsionRate = -4.6f;
+		
+		private float repulsionRate = -0.6f;
+//		private float repulsionRate = -4.6f;
+		
 		private int visualisationSize = 1300;
+//		private int visualisationSize = 600;
 		
 		private int saveFrameCount = 0;
+		private int updateCount = 0;
+		
+		private long updateTime = 0;
+		private long drawTime	= 0;
+		
 		
 		public Nebular(){
 			
@@ -357,23 +369,29 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		public void updateFrame() {
 			
+			long updateStart = millis();
+			
 			for( Element e : elements) {
 				e.findDirection();
 			}
-			maxPosition = 0;
+//			maxPosition = 0;
+			maxPosition = 500;
 			for( Element e : elements) {
 				e.move();
 			}
-
-			//timeSinceLastDraw = millis() - timeOfLastDraw;
-			//System.err.println("time: "+timeSinceLastDraw);
-			//timeOfLastDraw = millis();
 			
-			saveVisualisation(false, myTablesType+"_"+"PointCloud_frame"+nfs(saveFrameCount++, 5));
+//			saveVisualisation(false, myTablesType+"_"+"PointCloud_frame"+nfs(saveFrameCount++, 5)+"_nova");
+			
+			updateCount++;
+			updateTime = millis() - updateStart;
+			System.out.println("update time: " + updateTime);
 		}
 		
 		public void drawFrame() {
+//			long drawStart = millis();
 			drawIt();
+//			drawTime = millis() - drawStart;
+//			System.out.println("draw time: " + drawTime);
 		}
 		
 		private void drawIt() {
@@ -434,11 +452,12 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		private class Element {
 			
-			private String myTerm, myLove;
-			private int myLoveLevel;
-			private PVector myPos, myDirection;
-			private Color myColor;
-			private int myID;
+			private String 		myTerm, myLove;
+			private int			myTermHash;
+			private int 		myLoveLevel;
+			private PVector 	myPos, myDirection;
+			private Color 		myColor;
+			private int 		myID;
 			
 			
 			public Element( String _myTerm, String _myLove, int _loveLevel, Color _color, int _id) {
@@ -446,6 +465,8 @@ public class VisApplet extends PApplet implements VisInterface{
 				myID = _id;
 				
 				myTerm = _myTerm;
+				myTermHash = myTerm.hashCode();
+				
 				myLove = _myLove;
 				myLoveLevel = _loveLevel;
 				
@@ -476,33 +497,41 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				//myDirection.mult((float)0.5);
 				
+//				boolean effect = false;
+				
+				// motion damper:
+				myDirection.mult(0.7f);
+				
 				for( Element e : elements) {
-					
 					
 					
 					// TODO take into account the special love i have
 					// TODO take into account the others special love
 					
-					if ( myID != e.getID() && !myTerm.equalsIgnoreCase(e.getTerm())) {
+					if ( /*myID != e.getID() && */ myTermHash != e.getTermHash() ) {
 					
+												
 						PVector thisInfluenceDirection = new PVector(e.getPos().x, e.getPos().y);
 						thisInfluenceDirection.sub(myPos);
 						
 						float thisDistance = thisInfluenceDirection.magSq();
 						//thisDistance = thisDistance*thisDistance;
 						
-						if( thisDistance < (maximumDrawSpread/12) ) {
+						if( thisDistance < (maximumDrawSpread) ) {
+							
+//							effect = true;
 
 							thisInfluenceDirection.normalize();
 
 							float thisInfluenceMag;
-							float thisRelation = (float) myTable.getRelation( myTerm, e.getTerm());
-							float thisRelationSquared = (float) thisRelation * thisRelation;
+							int thisRelation =  myTable.getRelation( myTerm, e.getTerm());
 
 							if (thisRelation == 0) {
-								thisInfluenceMag = (float) repulsionRate;
+								thisInfluenceMag = (float) repulsionRate / thisDistance;
+//								thisInfluenceMag = 0f;
 							} else {
 
+								float thisRelationSquared = (float) (thisRelation * thisRelation);
 								//thisInfluenceMag = thisRelation;
 								thisInfluenceMag = (float) influenceFactor * thisRelationSquared / thisDistance;
 
@@ -515,18 +544,27 @@ public class VisApplet extends PApplet implements VisInterface{
 					
 				}
 				
+//				if( effect ) {
+//					myColor = new Color(255,0,255);
+//				} else {
+//					myColor = new Color(0);
+//				}
 			}
 			
 			public void move() {
 				
 				myPos.add(myDirection);
 				
-				if( abs(myPos.x) > abs(maxPosition) ) maxPosition = abs(myPos.x);
-				if( abs(myPos.y) > abs(maxPosition) ) maxPosition = abs(myPos.y);
+//				if( abs(myPos.x) > abs(maxPosition) ) maxPosition = abs(myPos.x);
+//				if( abs(myPos.y) > abs(maxPosition) ) maxPosition = abs(myPos.y);
 			}
 			
 			public String getTerm(){
 				return myTerm;
+			}
+			
+			public int getTermHash() {
+				return myTermHash;
 			}
 			
 			public PVector getPos() {
