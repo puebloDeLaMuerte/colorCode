@@ -30,5 +30,7 @@ public interface VisInterface{
 	
 	public void setDisplayOffset(int _xOffset, int _Yoffset);
 	
+	public boolean setType(TableTypes _type);
+	
 	public void drawFrame();
 }

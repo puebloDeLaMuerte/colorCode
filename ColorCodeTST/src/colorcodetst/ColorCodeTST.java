@@ -106,7 +106,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		//initFlusseriana();
 		//initExhibits();		
 		//flussData.hasConnections("Author", "Peter Weibel", "Entry",666);
-		//flussData.hasConnections("Author", "Philipp Tšgel", "Entry Contagem",666);
+		//flussData.hasConnections("Author", "Philipp Tï¿½gel", "Entry Contagem",666);
 
 		//println("...exit programm after successful run. being happy and all!");
 		//exit();
@@ -116,9 +116,9 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		mb = new MenuBar();
 		mn1 = new Menu("Datei");
-		itm1 = new MenuItem("šffnen");
+		itm1 = new MenuItem("ï¿½ffnen");
 		itm2 = new MenuItem("speichern unter...");
-		itm3 = new MenuItem("mšglich, aber nicht nštig");
+		itm3 = new MenuItem("mï¿½glich, aber nicht nï¿½tig");
 		mn1.add(itm1);
 		mn1.add(itm2);
 		mn1.addSeparator();
@@ -141,7 +141,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 //		container = new JPanel( new GridLayout(0, 1));
 		container = new JPanel( new GridBagLayout());
 		GridBagConstraints gbc = new GridBagConstraints();
-		container.setBackground(Color.LIGHT_GRAY);
+		container.setBackground(new Color(134, 184, 204));
 		//container.setBorder(BorderFactory.createTitledBorder("warum nicht"));
 		//container.setOpaque(true);
 		
@@ -150,6 +150,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		visualize = new Button("visualize");
 		visualize.addActionListener(this);
+		visualize.setFocusable(false);
 		
 		mode1 = new JRadioButton("grid1");
 		mode2 = new JRadioButton("grid2");
@@ -161,7 +162,15 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		mode3.addActionListener(this);
 		mode4.addActionListener(this);
 		mode5.addActionListener(this);
-		mode2.setSelected(true);
+		
+		mode1.setFocusable(false);
+		mode2.setFocusable(false);
+		mode3.setFocusable(false);
+		mode4.setFocusable(false);
+		mode5.setFocusable(false);
+		
+//		mode1.setSelected(true);
+		
 		group = new ButtonGroup();
 		group.add(mode1);
 		group.add(mode2);
@@ -171,15 +180,19 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		save_visualisation = new Button("save visualisation");
 		save_visualisation.addActionListener(this);
+		save_visualisation.setFocusable(false);
 		
 		save_all_sorted = new Button("save all sorted");
 		save_all_sorted.addActionListener(this);
+		save_all_sorted.setFocusable(false);
 		
 		close = new Button("close");
 		close.addActionListener(this);
+		close.setFocusable(false);
 		
 		quit = new Button("quit");
 		quit.addActionListener(this);
+		quit.setFocusable(false);
 		
 		visPanel = new Panel();
 		visPanel.setLayout(new GridLayout(1, 2));
@@ -224,21 +237,25 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		sortOptions_type = new JComboBox(TableTypes.values());
 		sortOptions_type.addActionListener(this);
+		sortOptions_type.setFocusable(false);
 		sortOptions.add(sortOptions_type);
 		
 		sortOptions_focal = new JComboBox();
 		DefaultComboBoxModel modl = new DefaultComboBoxModel(new String[]{"none"});
 		sortOptions_focal.setModel(modl);
 		sortOptions_focal.setMaximumRowCount(40);
+		sortOptions_focal.setFocusable(false);
 		sortOptions_focal.addActionListener(this);
 		sortOptions.add(sortOptions_focal);
 		
 		sortOptions_go = new Button("sort");
 		sortOptions_go.addActionListener(this);
+		sortOptions_go.setFocusable(false);
 		sortOptions.add(sortOptions_go);
 		
 		sortOptions_path = new Button("calculate path");
 		sortOptions_path.addActionListener(this);
+		sortOptions_path.setFocusable(false);
 		sortOptions.add(sortOptions_path);
 		
 		sortOptions.setVisible(true);
@@ -255,14 +272,32 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		subContainer.add(container);
 		//subContainer.setBorder(BorderFactory.createLineBorder(Color.BLACK)); 
-		subContainer.setBackground(Color.LIGHT_GRAY);
+		subContainer.setBackground(new Color(134, 184, 204));
 		subContainer.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		subContainer.setVisible(true);
 
+		mode1.doClick();
 		
 		stat.completed();
 	}
 
+	public void setSaveButtonState(boolean state) {
+		
+		
+		if( state == true ) {
+			
+			save_visualisation.setLabel("disable save");
+			save_visualisation.setForeground(new Color(161, 212, 144));
+			
+		} else if( state == false ) {
+			
+			save_visualisation.setLabel("enable save");
+			save_visualisation.setForeground(new Color(212, 161, 144));
+			
+		}
+		
+	}
+	
 	public void actionPerformed( ActionEvent e) {
 		
 		if( e.getSource() == visualize) {
@@ -272,44 +307,56 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		if( e.getSource() == save_visualisation) {
 			
 			
-			String filename;
-			TableTypes tableType = visFrame.visApplet.getCurrentTableType();
-			
-			switch (tableType) {
-			case KEYS:
+			if (save_visualisation.getLabel().equalsIgnoreCase("save visualisation")) {
 				
-				filename =  "KEYS_";
-				filename += visFrame.visApplet.getVismodeString();
-				filename += "-";
-				filename +=  keywordRelations.getFocal();
+				String filename;
+				TableTypes tableType = visFrame.visApplet.getCurrentTableType();
+				switch (tableType) {
+				case KEYS:
+
+					filename = "KEYS_";
+					filename += visFrame.visApplet.getVismodeString();
+					filename += "-";
+					filename += keywordRelations.getFocal();
+
+					visFrame.visApplet.saveVisualisation(true, filename);
+					break;
+
+				case OBJ_S:
+
+					filename = "OBJECT-S_";
+					filename += visFrame.visApplet.getVismodeString();
+					filename += "_";
+					filename += objectRelationsSimple.getFocal();
+
+					visFrame.visApplet.saveVisualisation(true, filename);
+					break;
+
+				case SORTED:
+
+					filename = "" + sortedTable.getTablesType();
+					filename += "_";
+					filename += visFrame.visApplet.getVismodeString();
+					filename += "_";
+					filename += objectRelationsSimple.getFocal();
+
+					visFrame.visApplet.saveVisualisation(true, filename);
+					break;
+
+				default:
+
+					break;
+				}
+			} else if( save_visualisation.getLabel().equalsIgnoreCase("enable save") ) {
 				
-				visFrame.visApplet.saveVisualisation(true, filename);
-				break;
+				save_visualisation.setLabel("disable save");
+				save_visualisation.setForeground(new Color(161, 212, 144));
 				
-			case OBJ_S:
+			} else if( save_visualisation.getLabel().equalsIgnoreCase("disable save") ) {
 				
-				filename  = "OBJECT-S_";
-				filename += visFrame.visApplet.getVismodeString();
-				filename += "_";
-				filename += objectRelationsSimple.getFocal();
+				save_visualisation.setLabel("enable save");
+				save_visualisation.setForeground(new Color(212, 161, 144));
 				
-				visFrame.visApplet.saveVisualisation(true, filename);
-				break;
-				
-			case SORTED:
-				
-				filename  = ""+sortedTable.getTablesType();
-				filename += "_";
-				filename += visFrame.visApplet.getVismodeString();
-				filename += "_";
-				filename += objectRelationsSimple.getFocal();
-				
-				visFrame.visApplet.saveVisualisation(true, filename);
-				break;
-				
-			default:
-				
-				break;
 			}
 		}
 		
@@ -357,18 +404,32 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		}
 		if( e.getSource() == mode1 ) {
 			currentVisMode = VisModes.GRID_HARD;
+			save_visualisation.setLabel("save visualisation");
+			save_all_sorted.setEnabled(true);
 		}
 		if( e.getSource() == mode2 ) {
 			currentVisMode = VisModes.GRID_SOFT;
+			save_visualisation.setLabel("save visualisation");
+			save_all_sorted.setEnabled(true);
 		}
 		if( e.getSource() == mode3 ) {
 			currentVisMode = VisModes.CIRCULAR;
+			save_visualisation.setLabel("save visualisation");
+			save_all_sorted.setEnabled(true);
 		}
 		if( e.getSource() == mode4 ) {
 			currentVisMode = VisModes.PATH;
+			save_visualisation.setLabel("save visualisation");
+			save_all_sorted.setEnabled(true);
 		}
 		if( e.getSource() == mode5 ) {
 			currentVisMode = VisModes.NEBULAR;
+			
+			save_all_sorted.setEnabled(false);
+			
+			save_visualisation.setLabel("enable save");
+			save_visualisation.setForeground(new Color(212, 161, 144));
+			
 		}
 
 		
@@ -741,7 +802,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			String[] dataArray = dataRow.split(",");
 			int i = 0;
 			for(String elem:dataArray) {
-				elem = (String)elem.subSequence(1, elem.length()-1);  // Do this to get rid of the AnfŸhrungszeichen
+				elem = (String)elem.subSequence(1, elem.length()-1);  // Do this to get rid of the Anfï¿½hrungszeichen
 				exhibitsDataInt.put(elem, i++);
 				dprint(exhibitsDataInt.get(elem) +" "+ elem);
 			}
@@ -755,7 +816,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 				dataArray = dataRow.split(",");
 				
 				for (String item:dataArray) { 
-					if(item.length()>2) item = (String)item.subSequence(1, item.length()-1);  // Do this to get rid of the AnfŸhrungszeichen
+					if(item.length()>2) item = (String)item.subSequence(1, item.length()-1);  // Do this to get rid of the Anfï¿½hrungszeichen
 					XML col = new XML("COL");
 					XML dat = new XML("DATA");
 					dat.setContent(item);
@@ -864,9 +925,17 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		public void  newVisualisation() {
 			
-			visApplet.setVisualisationParams(currentVisMode);
-
+			boolean savebool;
+			
+			if( save_visualisation.getLabel().equals("disable save")) {
+				savebool = true;
+			} else {
+				savebool = false;
+			}
+			
 			TableTypes type = (TableTypes)visTable.getSelectedItem();
+
+			visApplet.setVisualisationParams(currentVisMode, type, savebool);
 			   
 		    switch (type) {
 			

@@ -3,11 +3,14 @@ package colorcodetst;
 
 import java.awt.Color;
 import java.io.File;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 
 
@@ -25,7 +28,7 @@ import processing.event.MouseEvent;
 public class VisApplet extends PApplet implements VisInterface{
 	
 	private static final long serialVersionUID = 4722827600944467489L;
-	public VisInterface vis;
+	public VisInterface visInterface;
 	private JFrame frame;
 	private ColorCodeTST pa;
 	private int mouseXOffset, mouseYOffset;
@@ -47,10 +50,11 @@ public class VisApplet extends PApplet implements VisInterface{
 	}
 	
 	public void draw() {
-		if( vis == null || !vis.hasVisual() ) {
+		if( visInterface == null || !visInterface.hasVisual() ) {
 			background(0);
 			fill(255);
 			text("visualizing...", random(width), random(height));
+			
 		}
 		else if ( display != null )
 		{	
@@ -66,24 +70,25 @@ public class VisApplet extends PApplet implements VisInterface{
 			}
 			
 		}
-		else System.out.println("vis seems to be NULL...");
+		else System.out.println("visApplet seems to be NULL...");
 		
 		
 		if(doNewVisualisation && tableToVisualize != null) {
-			vis.visualize(tableToVisualize);
+			visInterface.visualize(tableToVisualize);
 			tableToVisualize = null;
 		}
-		if( doNewVisualisation && tableToVisualize == null && vis != null && vis.hasVisual() ) {
+		if( doNewVisualisation && tableToVisualize == null && visInterface != null && visInterface.hasVisual() ) {
 			
-			display = vis.getVisualisationGraphics();
+			display = visInterface.getVisualisationGraphics();
 			doNewVisualisation = false;
 		}
 		
-		if( frameCount != 0 && vis != null && vis.getVisMode() == VisModes.NEBULAR ) {
+		if( frameCount != 0 && visInterface != null && visInterface.getVisMode() == VisModes.NEBULAR && visInterface.hasVisual()) {
 			
-			if(!pauseToggle) vis.updateFrame();
-			vis.drawFrame();
-			display = vis.getVisualisationGraphics();
+			if(!pauseToggle) visInterface.updateFrame();
+			visInterface.drawFrame();
+			display = visInterface.getVisualisationGraphics();
+			image(display,0,0,width, height);
 			//System.out.println("frame updated");
 		}
 		
@@ -96,7 +101,7 @@ public class VisApplet extends PApplet implements VisInterface{
 	}
 	
 	public boolean hasVisual() {
-		if( vis != null && vis.hasVisual() ) return true;
+		if( visInterface != null && visInterface.hasVisual() ) return true;
 		else return false;
 	}
 	
@@ -110,8 +115,8 @@ public class VisApplet extends PApplet implements VisInterface{
 
 	@Override
 	public void sayHello() {
-		if( vis != null ) {
-			vis.sayHello();
+		if( visInterface != null ) {
+			visInterface.sayHello();
 		}
 		else System.out.println("this is the VisApplet. There doesn't seem to be a visInterface in place, sorry!");
 		
@@ -123,47 +128,59 @@ public class VisApplet extends PApplet implements VisInterface{
 	
 	@Override
 	public String getVismodeString() {
-		if( vis != null ) {
-			return vis.getVismodeString();
+		if( visInterface != null ) {
+			return visInterface.getVismodeString();
 		}
-		else return "vis is null";
+		else return "visApplet is null";
 	}
 
 	public VisModes getVisMode() {
-		if( vis != null ) return vis.getVisMode();
+		if( visInterface != null ) return visInterface.getVisMode();
 		else return null;
 	}
 	
 	@Override
 	public MyUtils.TableTypes getCurrentTableType() {
-		if( vis != null ) {
-			return vis.getCurrentTableType();
+		if( visInterface != null ) {
+			return visInterface.getCurrentTableType();
 		}
 		else return null;
 	}
 
-	public void setVisualisationParams(VisModes _mode) {
+	public void setVisualisationParams(VisModes _mode, TableTypes type, boolean savebool) {
 		
-		if( vis == null || vis.getVisMode() != _mode ) changeVisMode(_mode);
+
+			changeVisMode(_mode);
+
+			visInterface.setType(type);
+			
+			if( visInterface.getClass().equals(Nebular.class)) {
+				
+				Nebular neb = (Nebular)visInterface;
+				
+				neb.setSave(savebool);
+			}
+		
 	}
+	
 	
 	private void changeVisMode( VisModes _mode ) {
 		
 		switch (_mode) {
 		case GRID_HARD:
-			vis = new GridHard();
+			visInterface = new GridHard();
 			break;
 		case GRID_SOFT:
-			vis = new GridSoft();
+			visInterface = new GridSoft();
 			break;
 		case CIRCULAR:
-			vis = new Circular();
+			visInterface = new Circular();
 			break;
 		case PATH:
-			vis = new Path();
+			visInterface = new Path();
 			break;
 		case NEBULAR:
-			vis = new Nebular();
+			visInterface = new Nebular();
 			break;
 
 		default:
@@ -179,8 +196,8 @@ public class VisApplet extends PApplet implements VisInterface{
 
 	@Override
 	public boolean saveVisualisation(boolean _askForName, String _suggestedName) {
-		if( vis != null && vis.hasVisual() ) {
-			return vis.saveVisualisation(_askForName, _suggestedName);
+		if( visInterface != null && visInterface.hasVisual() ) {
+			return visInterface.saveVisualisation(_askForName, _suggestedName);
 		}
 		else return false;
 	}	
@@ -213,7 +230,7 @@ public class VisApplet extends PApplet implements VisInterface{
 
 	public void mouseWheel(MouseEvent event) {
 		float e = event.getCount();
-		if(vis != null) vis.setDisplayZoomValue(e);
+		if(visInterface != null) visInterface.setDisplayZoomValue(e);
 	}
 	
 	public void mousePressed(MouseEvent e){
@@ -222,7 +239,7 @@ public class VisApplet extends PApplet implements VisInterface{
 	}
 	
 	public void mouseDragged(MouseEvent e){
-		if(vis != null) vis.setDisplayOffset(e.getX()-mousePX, e.getY()-mousePY);
+		if(visInterface != null) visInterface.setDisplayOffset(e.getX()-mousePX, e.getY()-mousePY);
 		mousePX = e.getX();
 		mousePY = e.getY();
 	}
@@ -234,7 +251,11 @@ public class VisApplet extends PApplet implements VisInterface{
 		}
 	}
 	
-	
+	@Override
+	public boolean setType(TableTypes _type) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 		
 	//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||
 
@@ -243,12 +264,15 @@ public class VisApplet extends PApplet implements VisInterface{
 
 		private static final long serialVersionUID = 2990147396825116184L;
 
-		private String myVismodeString = "nebular";
-		private VisModes myVismode = VisModes.NEBULAR;
-		private TableTypes myTablesType;
-		private boolean visBool = false;
-		private RelationTable myTable;
-		private PGraphics graphics;
+		private String 			myVismodeString = "nebular";
+		private VisModes 		myVismode = VisModes.NEBULAR;
+		private boolean			save = false;
+		private String			folderName;
+		
+		private TableTypes 		myTablesType;
+		private boolean 		visBool = false;
+		private RelationTable 	myTable;
+		private PGraphics 		graphics;
 
 		private float zoomfactor = 1;
 		private int xOffset = 0, yOffset = 0;
@@ -258,15 +282,18 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		private float maximumInitialSpread = 80;
 		
-//		private float maximumDrawSpread = 200;
-		private float maximumDrawSpread = 17;
+		private float maximumDrawSpread = 200;
+//		private float maximumDrawSpread = 18;
 //		private float maximumDrawSpread = 1199800;
 		
-		//private float influenceFactor = (float)0.00000005;
-		private float influenceFactor = (float)0.0005;
-		//private float influenceFactor = (float)15;
+		private float influenceFactor = (float)0.000005;
+//		private float influenceFactor = (float)0.0005;
+//		private float influenceFactor = (float)15;
 		
-		private float repulsionRate = -0.6f;
+		
+		private float repulsionRate = -0.0f;
+//		private float repulsionRate = -0.6f;
+//		private float repulsionRate = -1.2f;
 //		private float repulsionRate = -4.6f;
 		
 		private int visualisationSize = 1300;
@@ -300,6 +327,9 @@ public class VisApplet extends PApplet implements VisInterface{
 			LinkedHashMap<Integer, String> idx_row;
 			int elemCount;
 			
+			
+			boolean hist = false;
+			
 
 			//  Put multiple Elements for visualisation
 			if( true ) {
@@ -328,9 +358,10 @@ public class VisApplet extends PApplet implements VisInterface{
 									idx_col.get(c), 
 									rel, 
 									theColor,
-									elemCount
+									elemCount,
+									hist
 									));
-
+//							first = false;
 							elemCount++;
 						}
 					}
@@ -359,7 +390,8 @@ public class VisApplet extends PApplet implements VisInterface{
 							"", 
 							0,
 							theColor,
-							r
+							r,
+							false
 							);
 				}
 
@@ -380,7 +412,7 @@ public class VisApplet extends PApplet implements VisInterface{
 				e.move();
 			}
 			
-//			saveVisualisation(false, myTablesType+"_"+"PointCloud_frame"+nfs(saveFrameCount++, 5)+"_nova");
+			
 			
 			updateCount++;
 			updateTime = millis() - updateStart;
@@ -392,6 +424,11 @@ public class VisApplet extends PApplet implements VisInterface{
 			drawIt();
 //			drawTime = millis() - drawStart;
 //			System.out.println("draw time: " + drawTime);
+			
+			if (save && !pauseToggle) {
+				saveVisualisation(false, folderName+"/"+myTablesType + "_Nebular_" + nfs(saveFrameCount++, 5));
+			}
+			
 		}
 		
 		private void drawIt() {
@@ -407,6 +444,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			this.graphics.pushMatrix();
 			this.graphics.translate(this.graphics.width/2, this.graphics.height/2);
 			this.graphics.stroke(0);
+			
 			if( false ) {
 				
 				// draw crosshair
@@ -421,19 +459,41 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 			for(Element e: elements) {
 				
-				//this.graphics.stroke(e.myColor.getRGB());
+				
 				this.graphics.fill(e.myColor.getRGB(), 160);
-				//this.graphics.point(mappedPos(e.getXpos()), mappedPos(e.getYpos()));
-				//this.graphics.ellipse(mappedXPos(e.getXpos())-1, mappedYPos(e.getYpos())-1, 3, 3);
-				//this.graphics.fill(e.myColor.getRGB(), 70);
+				
 				this.graphics.ellipse(mappedXPos(e.getXpos())-2, mappedYPos(e.getYpos())-2, 5, 5);
-
-				//this.graphics.line(0,0,mappedXPos(e.getXpos()), mappedYPos(e.getYpos()));
+				
+//				if( e.hasHistory && e.history.size() > 3) {
+//					
+//
+//					
+////					this.graphics.pushStyle();
+////					this.graphics.fill(0);
+////					this.graphics.stroke(0);
+//					
+//					PVector[] vecs = (PVector[]) e.history.toArray(new PVector[e.history.size()]);
+//					
+//					for (int i = 0; i < vecs.length-1; i++) {
+//						PVector v1 = vecs[i];
+//						PVector v2 = vecs[i+1];
+//						
+//						PVector len = PVector.sub(v1, v2);
+//						float length = (float)(abs(len.mag()));
+//						if(length > 2f) length = 2f;
+//						float intense = (float)(255f * (-1f * (length - 2f)));
+//						this.graphics.stroke(e.myColor.getRGB(), intense );
+//						this.graphics.strokeWeight(intense / 63);
+//						
+//						this.graphics.line(mappedXPos(v1.x), mappedYPos(v1.y), mappedXPos(v2.x), mappedYPos(v2.y));
+//					}
+////					this.graphics.popStyle();
+//				}
 				
 			}
 			this.graphics.popMatrix();
 			this.graphics.fill(0);
-			this.graphics.text("frameCount: "+frameCount, 20, 20);
+			this.graphics.text("updates: "+updateCount, 20, 20);
 			this.graphics.endDraw();
 			
 		}
@@ -459,8 +519,12 @@ public class VisApplet extends PApplet implements VisInterface{
 			private Color 		myColor;
 			private int 		myID;
 			
+			public boolean		hasHistory;
+			public ArrayList<PVector> history;
 			
-			public Element( String _myTerm, String _myLove, int _loveLevel, Color _color, int _id) {
+			public Element( String _myTerm, String _myLove, int _loveLevel, Color _color, int _id, boolean hasHistory) {
+				
+				
 				
 				myID = _id;
 				
@@ -472,8 +536,20 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				myDirection = new PVector(0,0);
 				
-				//myPos = setNewCircularRandomPosition();
+				
+				this.hasHistory = hasHistory;
+				
+				if( hasHistory ) {
+					this.history = new ArrayList<PVector>();
+
+//					myPos = new PVector(0, 0);
+				}
+				
+//				
 				myPos = setNewSquaredRandomPosition();
+//				myPos = setNewCircularRandomPosition();
+				
+				
 				
 				myColor = _color;
 				
@@ -523,21 +599,27 @@ public class VisApplet extends PApplet implements VisInterface{
 
 							thisInfluenceDirection.normalize();
 
-							float thisInfluenceMag;
 							int thisRelation =  myTable.getRelation( myTerm, e.getTerm());
+							
+							float thisInfluenceMag = 1 / (thisRelation + 0.000001f);
+							
+							thisInfluenceMag = thisInfluenceMag / thisDistance * influenceFactor * -1;
 
-							if (thisRelation == 0) {
-								thisInfluenceMag = (float) repulsionRate / thisDistance;
-//								thisInfluenceMag = 0f;
-							} else {
+//  so war's mal:
+//							if (thisRelation == 0) {
+//								thisInfluenceMag = (float) repulsionRate / thisDistance;
+////								thisInfluenceMag = 0f;
+//							} else {
+//
+//								float thisRelationSquared = (float) (thisRelation * thisRelation);
+//								//thisInfluenceMag = thisRelation;
+//								thisInfluenceMag = (float) influenceFactor * thisRelationSquared / thisDistance;
+//
+//							}
+// bis hier
 
-								float thisRelationSquared = (float) (thisRelation * thisRelation);
-								//thisInfluenceMag = thisRelation;
-								thisInfluenceMag = (float) influenceFactor * thisRelationSquared / thisDistance;
-
-							}
 							thisInfluenceDirection.mult(thisInfluenceMag);
-							//thisInfluenceDirection.mult(influenceFactor);
+
 							myDirection.add(thisInfluenceDirection);
 						}
 					}
@@ -554,6 +636,10 @@ public class VisApplet extends PApplet implements VisInterface{
 			public void move() {
 				
 				myPos.add(myDirection);
+				
+				if( hasHistory ) {
+					history.add(new PVector(myPos.x, myPos.y));
+				}
 				
 //				if( abs(myPos.x) > abs(maxPosition) ) maxPosition = abs(myPos.x);
 //				if( abs(myPos.y) > abs(maxPosition) ) maxPosition = abs(myPos.y);
@@ -582,6 +668,8 @@ public class VisApplet extends PApplet implements VisInterface{
 			public int getID() {
 				return myID;
 			}
+		
+			
 		}
 		
 		
@@ -643,7 +731,7 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				if( input != null ) {
 					graphics.save(pa.dataFolderPath+input+".jpg");
-					//vis.save(input+".jpg");
+					//visApplet.save(input+".jpg");
 					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
 					
 				}
@@ -679,7 +767,37 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 		}
 
-		
+		public void setSave(boolean b) {
+			
+			save = b;
+			
+			if (save == true) {
+				DateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm");
+				Date date = new Date();
+				String input = JOptionPane.showInputDialog("please input folder name", dateFormat.format(date) + "_" + myTablesType + "_" + myVismodeString);
+
+				if( input == null) {
+					
+					save = false;
+					pa.setSaveButtonState(false);
+				} else {
+					
+					folderName = input;
+				}
+			}
+			
+			
+		}
+
+		@Override
+		public boolean setType(TableTypes _type) {
+			if( myTablesType == null) {
+				myTablesType = _type;
+				return true;
+			} else {
+				return false;
+			}
+		}
 	}
 
 	public class GridSoft implements VisInterface{
@@ -781,13 +899,13 @@ public class VisApplet extends PApplet implements VisInterface{
 			this.graphics.background(bg);
 			this.graphics.noStroke();
 
-			//vis.image(brush,200,200);
+			//visApplet.image(brush,200,200);
 			
 			for(int x = 0; x<noOfCells; x++ ) {
 				for(int y = 0; y<noOfCells; y++) {
 					
-					//vis.fill(  230-(_table.getRelationByIndex(x, y)*10)  );
-					//vis.rect(100+(x*(cellSize)), 100+(y*(cellSize)), cellSize, cellSize);
+					//visApplet.fill(  230-(_table.getRelationByIndex(x, y)*10)  );
+					//visApplet.rect(100+(x*(cellSize)), 100+(y*(cellSize)), cellSize, cellSize);
 					this.graphics.tint(255, _table.getRelationByIndex(x, y)*2 );
 					this.graphics.image(brush,40+(x*(cellSize)), 40+(y*(cellSize)));
 					
@@ -796,7 +914,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 			
 			this.graphics.endDraw();
-			//show = vis;
+			//show = visApplet;
 			pa.stat.end();
 			visBool = true;
 		}
@@ -817,7 +935,7 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				if( input != null ) {
 					graphics.save(pa.dataFolderPath+input+".jpg");
-					//vis.save(input+".jpg");
+					//visApplet.save(input+".jpg");
 					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
 					
 				}
@@ -867,6 +985,17 @@ public class VisApplet extends PApplet implements VisInterface{
 		public void drawFrame() {
 			// TODO Auto-generated method stub
 			
+		}
+
+		@Override
+		public boolean setType(TableTypes _type) {
+			if( myTablesType != null ) {
+				return false;
+			}
+			else {
+				myTablesType = _type;
+				return true;
+			}
 		}
 
 		
@@ -1017,7 +1146,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 			
 			this.graphics.endDraw();
-			//show = vis;
+			//show = visApplet;
 			pa.stat.end();
 			visBool = true;
 		}
@@ -1038,7 +1167,7 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				if( input != null ) {
 					graphics.save(pa.dataFolderPath+input+".jpg");
-					//vis.save(input+".jpg");
+					//visApplet.save(input+".jpg");
 					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
 					
 				}
@@ -1089,6 +1218,17 @@ public class VisApplet extends PApplet implements VisInterface{
 		public void drawFrame() {
 			// TODO Auto-generated method stub
 			
+		}
+
+		@Override
+		public boolean setType(TableTypes _type) {
+			if( myTablesType != null ) {
+				return false;
+			}
+			else {
+				myTablesType = _type;
+				return true;
+			}
 		}
 
 	}
@@ -1277,7 +1417,7 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				if( input != null ) {
 					graphics.save(pa.dataFolderPath+input+".jpg");
-					//vis.save(input+".jpg");
+					//visApplet.save(input+".jpg");
 					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
 					
 				}
@@ -1328,6 +1468,17 @@ public class VisApplet extends PApplet implements VisInterface{
 		public void drawFrame() {
 			// TODO Auto-generated method stub
 			
+		}
+
+		@Override
+		public boolean setType(TableTypes _type) {
+			if( myTablesType != null ) {
+				return false;
+			}
+			else {
+				myTablesType = _type;
+				return true;
+			}
 		}
 
 	}
@@ -1462,7 +1613,7 @@ public class VisApplet extends PApplet implements VisInterface{
 					PVector mid = new PVector(xySize/2, xySize/2);
 					
 					float tint = map(path.length-i, 0, path.length, 0, 255 );
-					//vis.stroke(0, 60 );
+					//visApplet.stroke(0, 60 );
 					graphics.stroke(0);
 					
 					float bow = new Float(0.5);
@@ -1518,7 +1669,7 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				if( input != null ) {
 					graphics.save(pa.dataFolderPath+input+".jpg");
-					//vis.save(input+".jpg");
+					//visApplet.save(input+".jpg");
 					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
 					
 				}
@@ -1571,8 +1722,22 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 		}
 
+		@Override
+		public boolean setType(TableTypes _type) {
+
+			if( myTablesType != null ) {
+				return false;
+			}
+			else {
+				myTablesType = _type;
+				return true;
+			}
+		}
+
 
 	}
+
+	
 
 	
 
