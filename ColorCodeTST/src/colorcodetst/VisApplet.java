@@ -50,25 +50,16 @@ public class VisApplet extends PApplet implements VisInterface{
 	}
 	
 	public void draw() {
+		
 		if( visInterface == null || !visInterface.hasVisual() ) {
+			
 			background(0);
 			fill(255);
 			text("visualizing...", random(width), random(height));
 			
 		}
-		else if ( display != null )
-		{	
+		else if ( display != null ) {	
 			image(display,0,0,width, height);
-			
-			if(pauseToggle) {
-				pushStyle();
-				noStroke();
-				fill(240,10,20);
-				rect(30,30,6,17);
-				rect(40,30,6,17);
-				popStyle();
-			}
-			
 		}
 		else System.out.println("visApplet seems to be NULL...");
 		
@@ -92,6 +83,14 @@ public class VisApplet extends PApplet implements VisInterface{
 			//System.out.println("frame updated");
 		}
 		
+		if(pauseToggle) {
+			pushStyle();
+			noStroke();
+			fill(240,10,20);
+			rect(30,30,6,17);
+			rect(40,30,6,17);
+			popStyle();
+		}
 		frameCount++;
 	}
 	
@@ -106,7 +105,7 @@ public class VisApplet extends PApplet implements VisInterface{
 	}
 	
 	public void setJFrame(JFrame _frame) {
-		frame = _frame;
+		this.frame = _frame;
 	}
 
 	public void setParent(ColorCodeTST _parent) {
@@ -244,11 +243,25 @@ public class VisApplet extends PApplet implements VisInterface{
 		mousePY = e.getY();
 	}
 
+	@Override
 	public void keyPressed() {
 		
 		if( key == ' ') {
 			pauseToggle = !pauseToggle;
 		}
+		
+		System.err.println("key 1");
+	}
+	
+	@Override
+	public void keyPressed(processing.event.KeyEvent e) {
+		
+		key = e.getKey();
+		
+		if( key == ' ') {
+			pauseToggle = !pauseToggle;
+		}
+		System.err.println("key 2");
 	}
 	
 	@Override
@@ -493,7 +506,8 @@ public class VisApplet extends PApplet implements VisInterface{
 			}
 			this.graphics.popMatrix();
 			this.graphics.fill(0);
-			this.graphics.text("updates: "+updateCount, 20, 20);
+			this.graphics.text("updates: "+ updateCount, 20, 20);
+			this.graphics.text("zoom   : "+ zoomfactor, 20, 40);
 			this.graphics.endDraw();
 			
 		}
