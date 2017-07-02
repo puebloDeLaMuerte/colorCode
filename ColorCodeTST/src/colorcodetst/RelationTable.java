@@ -2,6 +2,7 @@ package colorcodetst;
 
 import java.util.*;
 
+import MyUtils.Quicksort;
 import MyUtils.StatusGui;
 import MyUtils.TableTypes;
 
@@ -88,6 +89,54 @@ public class RelationTable {
 		}
 	}
 
+	RelationTable( ColorCodeTST _parent, TableTypes _Type, RelationTable originTable, String[] _orderRows, String[] _orderColumns, String _focal ) {
+		
+		parent = _parent;
+		
+		
+		
+		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(_orderRows.length,1);
+		index_col = new LinkedHashMap<Integer, String>(_orderColumns.length, 1);
+		index_row = new LinkedHashMap<Integer, String>(_orderRows.length, 1);
+		focal = _focal;
+		
+		if( _Type == TableTypes.SORTED ){
+			
+			System.err.println("TYPE CANNOT BE 'SORTED'");
+			
+		} else {
+			
+			myType = _Type;
+
+			// set up the rows-index from _orderRows[]
+			for(int i = 0; i<_orderRows.length; i++ ) {
+				index_row.put(i, _orderRows[i]);
+			}
+			
+			// set up the columns-index from _orderColumns[]
+			for(int i = 0; i<_orderColumns.length; i++ ) {
+				index_col.put(i, _orderColumns[i]);
+			}
+			
+			// put empty rows into table for later poputating them with values
+			for(int i=0; i<_orderRows.length; i++) {
+				table.put(_orderRows[i], new LinkedHashMap<String, Integer>(_orderRows.length, 1));
+			}
+
+			/* fill each row with the relation-values. 
+			 * The iteration order being taken from index_col
+			 */
+			int c = 0;
+			for (LinkedHashMap<String,Integer> row : table.values()) {
+				for(int i=0; i<index_col.size(); i++) {
+					row.put(index_col.get(i), originTable.getRelation(_orderRows[c], index_col.get(i)));
+				}
+				c++;
+			}		
+		}
+		
+		
+	}
 	
 	public void increaseRelation( String term1, String term2, int increment ) {
 		
@@ -340,7 +389,7 @@ public class RelationTable {
 		System.out.println("...........................................................................");
 	}
 	
-	public String[] getSortedIndices(String focal) {
+	public String[] getSortedTerms(String focal) {
 		
 		ArrayList<String> returnList = new ArrayList<String>();
 		
@@ -356,12 +405,55 @@ public class RelationTable {
 			for (int i = 0; i < index_row.size(); i++) {
 
 				tst = table.get(focal).get(index_col.get(i));
-				if( tst == m ) returnList.add(index_col.get(i));
+				if( tst == m ) {
+					returnList.add(index_col.get(i));
+				}
 				
 			}
 		}
+		
+		System.out.println("sort complete");
+		
 		return returnList.toArray(new String[returnList.size()]);
 	}
+	
+	public String[] getSortedTermsByTotalRelatednes() {
+		
+
+		
+		LinkedHashMap<String, Integer> totalRelatednes = new LinkedHashMap<String, Integer>(table.size());
+		
+		
+		
+		for( String s : table.keySet() ) {
+			
+			totalRelatednes.put(s, getTotalRelatednes(s));
+		}
+		 
+		
+		Quicksort sorter = new Quicksort();
+		
+		return sorter.sortHashMapByValue(totalRelatednes);
+		 
+	}
+	
+	public String[] getSortedTermsByOccurences() {
+		
+		LinkedHashMap<String, Integer> totalRelatednes = new LinkedHashMap<String, Integer>(table.size());
+		
+		
+		
+		for( String s : table.keySet() ) {
+			
+			totalRelatednes.put(s, getRelation(s, s));
+		}
+		 
+		
+		Quicksort sorter = new Quicksort();
+		
+		return sorter.sortHashMapByValue(totalRelatednes);
+	}
+	
 	
 	public LinkedHashMap<Integer, String> getColumnIndex() {
 		

@@ -32,7 +32,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 	private Panel 				subContainer;
 	
 	private Panel 				visPanel, visModePanel, savePanel, exitPanel, sortOptions;
-	private Button 				visualize, save_visualisation, save_all_sorted, close, quit;
+	private Button 				visualize, save_visualisation, save_all_sorted, close, quit, adcsort;
 	private JRadioButton		mode1, mode2, mode3, mode4, mode5;
 	private ButtonGroup			group;
 	private Button				sortOptions_go, sortOptions_path;
@@ -258,6 +258,11 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		sortOptions_path.setFocusable(false);
 		sortOptions.add(sortOptions_path);
 		
+		adcsort = new Button("adc sort");
+		adcsort.addActionListener(this);
+		adcsort.setFocusable(false);
+		sortOptions.add(adcsort);
+		
 		sortOptions.setVisible(true);
 		gbc.gridx = 0;
 		gbc.gridy = 4;
@@ -279,6 +284,42 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		mode1.doClick();
 		
 		stat.completed();
+	}
+
+	void populateTheList() {
+		
+		String[] theList;
+		TableTypes visopt = (TableTypes)sortOptions_type.getSelectedItem();
+	
+		switch (visopt) {
+	
+		case KEYS:
+			theList = keywordRelations.getRowValuesArrayAlphabetically();
+			break;
+	
+		case OBJ_S:
+			theList = objectRelationsSimple.getRowValuesArrayAlphabetically();
+			break;
+	
+		case OBJ_M:
+			theList = objectRelationsMeta.getRowValuesArrayAlphabetically();
+			break;
+	
+		default:
+			theList = null;
+			break;
+	
+		}
+		// If objectRelations Tables fail (==null) -> reinstantiate!
+	
+		if(theList != null) {
+			DefaultComboBoxModel modl = new DefaultComboBoxModel(theList);
+			sortOptions_focal.setModel(modl);
+		}
+		else {
+			DefaultComboBoxModel modl = new DefaultComboBoxModel(new String[] {"none"});
+			sortOptions_focal.setModel(modl);
+		}
 	}
 
 	public void setSaveButtonState(boolean state) {
@@ -377,10 +418,17 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 
 			populateTheList();
 		}
-		if( e.getSource() == sortOptions_go || e.getSource() == sortOptions_path) {
+		if( e.getSource() == sortOptions_go || e.getSource() == sortOptions_path || e.getSource() == adcsort) {
 			
 			doSort(e);
 		}
+		
+		if( e.getSource() == adcsort ) {
+			
+			sortRelationTableADC();
+			
+		}
+		
 		if( e.getSource() == visTable) {
 			
 		    visTable.getSelectedItem();
@@ -441,39 +489,6 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		visFrame = null;		
 	}
 
-	private void doSort( ActionEvent e ) {
-		
-		String focal = sortOptions_focal.getSelectedItem().toString(); 
-		TableTypes type = (TableTypes)sortOptions_type.getSelectedItem();
-		
-		if( !focal.equalsIgnoreCase("none") ) {
-			
-			if( e.getSource() == sortOptions_go)    sortRelationTable(type, focal);
-			if( e.getSource() == sortOptions_path)  {
-				
-				switch (type) {
-				case KEYS:
-					keywordRelations.findPathForFocal(focal, 1000);
-					break;
-				case OBJ_S:
-					objectRelationsSimple.findPathForFocal(focal, 1000);
-				case SORTED:
-					sortedTable.findPathForFocal(focal, 1000);
-				default:
-					break;
-				}
-				
-			}
-		}
-		else {
-			JOptionPane.showMessageDialog(frame,
-				    "no focal point selected!",
-				    "error",
-				    JOptionPane.WARNING_MESSAGE);
-		}
-		
-	}
-
 	private void visualize() {
 		
 		if(visFrame == null ) {
@@ -514,7 +529,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		for(String currentWord : words) {
 
 				dprint("SA: sorting...");
-			sortRelationTable(currentType, currentWord);
+			sortRelationTableByFocal(currentType, currentWord);
 				dprint("SA: visualizing...");
 			visualize();
 				dprint("SA: setting title...");
@@ -528,53 +543,77 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 	}
 	
-	void populateTheList() {
+	private void doSort( ActionEvent e ) {
 		
-		String[] theList;
-		TableTypes visopt = (TableTypes)sortOptions_type.getSelectedItem();
-
-		switch (visopt) {
-
-		case KEYS:
-			theList = keywordRelations.getRowValuesArrayAlphabetically();
-			break;
-
-		case OBJ_S:
-			theList = objectRelationsSimple.getRowValuesArrayAlphabetically();
-			break;
-
-		case OBJ_M:
-			theList = objectRelationsMeta.getRowValuesArrayAlphabetically();
-			break;
-
-		default:
-			theList = null;
-			break;
-
-		}
-		// If objectRelations Tables fail (==null) -> reinstantiate!
-
-		if(theList != null) {
-			DefaultComboBoxModel modl = new DefaultComboBoxModel(theList);
-			sortOptions_focal.setModel(modl);
+		String focal = sortOptions_focal.getSelectedItem().toString(); 
+		TableTypes type = (TableTypes)sortOptions_type.getSelectedItem();
+		
+		
+		if( !focal.equalsIgnoreCase("none") ) {
+			
+			if( e.getSource() == sortOptions_go)    sortRelationTableByFocal(type, focal);
+			if( e.getSource() == sortOptions_path)  {
+				
+				switch (type) {
+				case KEYS:
+					keywordRelations.findPathForFocal(focal, 1000);
+					break;
+				case OBJ_S:
+					objectRelationsSimple.findPathForFocal(focal, 1000);
+				case SORTED:
+					sortedTable.findPathForFocal(focal, 1000);
+				default:
+					break;
+				}
+				
+			}
 		}
 		else {
-			DefaultComboBoxModel modl = new DefaultComboBoxModel(new String[] {"none"});
-			sortOptions_focal.setModel(modl);
+			JOptionPane.showMessageDialog(frame,
+				    "no focal point selected!",
+				    "error",
+				    JOptionPane.WARNING_MESSAGE);
 		}
+		
+	}
+
+	void sortRelationTableADC() {
+		
+		TableTypes type = (TableTypes)sortOptions_type.getSelectedItem();
+
+		
+		switch (type) {
+		case KEYS:
+			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedTermsByTotalRelatednes(), keywordRelations.getSortedTermsByTotalRelatednes(), "adc" );
+//			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedTermsByOccurences(), "adc" );
+			break;
+		case OBJ_S:
+			sortedTable = new RelationTable( this, TableTypes.OBJ_S, objectRelationsSimple, objectRelationsSimple.getSortedTermsByTotalRelatednes(), "adc" );
+			break;
+		case OBJ_M:
+			sortedTable = new RelationTable( this, TableTypes.OBJ_M, objectRelationsMeta, objectRelationsMeta.getSortedTermsByTotalRelatednes(), "adc" );
+			break;
+		default:
+			break;
+		}
+		
+		//for(String a : sortedList) System.out.println(a);
+		dprint("sorted Table populated");
+		dprint("");
+		
 	}
 	
-	void sortRelationTable( TableTypes type, String focal) {
+	void sortRelationTableByFocal( TableTypes type, String focal) {
 
 		switch (type) {
 		case KEYS:
-			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedIndices(focal), focal );
+			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedTerms(focal), focal );
 			break;
 		case OBJ_S:
-			sortedTable = new RelationTable( this, TableTypes.OBJ_S, objectRelationsSimple, objectRelationsSimple.getSortedIndices(focal), focal );
+			sortedTable = new RelationTable( this, TableTypes.OBJ_S, objectRelationsSimple, objectRelationsSimple.getSortedTerms(focal), focal );
 			break;
 		case OBJ_M:
-			sortedTable = new RelationTable( this, TableTypes.OBJ_M, objectRelationsMeta, objectRelationsMeta.getSortedIndices(focal), focal );
+			sortedTable = new RelationTable( this, TableTypes.OBJ_M, objectRelationsMeta, objectRelationsMeta.getSortedTerms(focal), focal );
 			break;
 		default:
 			break;

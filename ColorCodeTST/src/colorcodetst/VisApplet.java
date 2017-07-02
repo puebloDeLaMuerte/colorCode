@@ -74,7 +74,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			doNewVisualisation = false;
 		}
 		
-		if( frameCount != 0 && visInterface != null && visInterface.getVisMode() == VisModes.NEBULAR && visInterface.hasVisual()) {
+		if( frameCount != 0 && visInterface != null && visInterface.getVisMode() == VisModes.NEBULAR /*&& visInterface.hasVisual()*/) {
 			
 			if(!pauseToggle) visInterface.updateFrame();
 			visInterface.drawFrame();
@@ -230,6 +230,10 @@ public class VisApplet extends PApplet implements VisInterface{
 	public void mouseWheel(MouseEvent event) {
 		float e = event.getCount();
 		if(visInterface != null) visInterface.setDisplayZoomValue(e);
+	}
+	
+	public void mouseClicked() {
+		pauseToggle = !pauseToggle;
 	}
 	
 	public void mousePressed(MouseEvent e){
@@ -770,8 +774,8 @@ public class VisApplet extends PApplet implements VisInterface{
 		@Override
 		public void setDisplayZoomValue(float _zoom) {
 			
-			zoomfactor += _zoom/4;
-			if(zoomfactor <= 0) zoomfactor = (float)0.1;
+			zoomfactor += _zoom/6 * (zoomfactor/3);
+			if(zoomfactor <= 0) zoomfactor = (float)0.001;
 		}
 
 		@Override
