@@ -14,6 +14,8 @@ import processing.core.PGraphics;
 import processing.core.PImage;
 import processing.core.PVector;
 import processing.data.XML;
+import MyUtils.SortOptions;
+import MyUtils.SortTableType;
 import MyUtils.StatusGui;
 import MyUtils.VisModes;
 import MyUtils.TableTypes;
@@ -36,7 +38,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 	private JRadioButton		mode1, mode2, mode3, mode4, mode5;
 	private ButtonGroup			group;
 	private Button				sortOptions_go, sortOptions_path;
-	private JComboBox			visTable, sortOptions_focal, sortOptions_type;
+	private JComboBox			visTable, sortOptions_rows, sortOptions_cols, sortOptions_table, sortOptions_rowFocals, sortOptions_colFocals;
 	
 	VisFrame visFrame;
 	VisFrame nebulaFrame;
@@ -232,42 +234,96 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 		sortOptions = new Panel();
 		//sortOptions.setBounds(0, 0,  width, height);
-		sortOptions.setLayout(new FlowLayout());
+		sortOptions.setLayout(new GridBagLayout());
 		sortOptions.setBackground(Color.MAGENTA);
 		
-		sortOptions_type = new JComboBox(TableTypes.values());
-		sortOptions_type.addActionListener(this);
-		sortOptions_type.setFocusable(false);
-		sortOptions.add(sortOptions_type);
+		JLabel what = new JLabel("table");
+		what.setForeground(Color.DARK_GRAY);
+		JLabel r = new JLabel("sort rows");
+		r.setForeground(Color.DARK_GRAY);
+		JLabel c = new JLabel("sort cols");
+		c.setForeground(Color.DARK_GRAY);
 		
-		sortOptions_focal = new JComboBox();
-		DefaultComboBoxModel modl = new DefaultComboBoxModel(new String[]{"none"});
-		sortOptions_focal.setModel(modl);
-		sortOptions_focal.setMaximumRowCount(40);
-		sortOptions_focal.setFocusable(false);
-		sortOptions_focal.addActionListener(this);
-		sortOptions.add(sortOptions_focal);
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		sortOptions.add(what, gbc);
+		gbc.gridx = 1;
+		gbc.gridy = 0;
+		sortOptions.add(r, gbc);
+		gbc.gridx = 2;
+		gbc.gridy = 0;
+		sortOptions.add(c, gbc);
+		
+		sortOptions_table = new JComboBox(MyUtils.SortTableType.values());
+		sortOptions_table.addActionListener(this);
+		sortOptions_table.setFocusable(false);
+		gbc.gridx = 0;
+		gbc.gridy = 1;
+		sortOptions.add(sortOptions_table, gbc);
+		
+		sortOptions_rows = new JComboBox();
+		DefaultComboBoxModel modl = new DefaultComboBoxModel(SortOptions.values());		
+		sortOptions_rows.setModel(modl);
+//		sortOptions_rows.setMaximumRowCount(40);
+		sortOptions_rows.setFocusable(false);
+		sortOptions_rows.addActionListener(this);
+		sortOptions_rows.setEnabled(false);
+		gbc.gridx = 1;
+		gbc.gridy = 1;
+		sortOptions.add(sortOptions_rows, gbc);
+		
+		sortOptions_cols = new JComboBox();
+		DefaultComboBoxModel modl_r = new DefaultComboBoxModel(SortOptions.values());
+		sortOptions_cols.setModel(modl_r);
+//		sortOptions_cols.setMaximumRowCount(40);
+		sortOptions_cols.setFocusable(false);
+		sortOptions_cols.addActionListener(this);
+		sortOptions_cols.setEnabled(false);
+		gbc.gridx = 2;
+		gbc.gridy = 1;
+		sortOptions.add(sortOptions_cols, gbc);
 		
 		sortOptions_go = new Button("sort");
 		sortOptions_go.addActionListener(this);
 		sortOptions_go.setFocusable(false);
-		sortOptions.add(sortOptions_go);
+		sortOptions_go.setEnabled(false);
+		gbc.gridx = 3;
+		gbc.gridy = 1;
+		sortOptions.add(sortOptions_go, gbc);
 		
-		sortOptions_path = new Button("calculate path");
-		sortOptions_path.addActionListener(this);
-		sortOptions_path.setFocusable(false);
-		sortOptions.add(sortOptions_path);
 		
-		adcsort = new Button("adc sort");
-		adcsort.addActionListener(this);
-		adcsort.setFocusable(false);
-		sortOptions.add(adcsort);
+		sortOptions_rowFocals = new JComboBox();
+		DefaultComboBoxModel rowmodel = new DefaultComboBoxModel(new String[]{"focal        "});
+		sortOptions_rowFocals.setModel(rowmodel);
+//		sortOptions_rowFocals.setMinimumSize(new Dimension(60, 1));
+		sortOptions_rowFocals.setMaximumRowCount(40);
+//		sortOptions_rowFocals.addActionListener(this);
+		sortOptions_rowFocals.setFocusable(false);
+		sortOptions_rowFocals.setEnabled(false);
+		gbc.gridx = 1;
+		gbc.gridy = 2;
+		sortOptions.add(sortOptions_rowFocals, gbc);
+		
+		sortOptions_colFocals = new JComboBox();
+		DefaultComboBoxModel colmodel = new DefaultComboBoxModel(new String[]{"focal        "});
+		sortOptions_colFocals.setModel(colmodel);
+//		sortOptions_colFocals.setMinimumSize(new Dimension(60, 1));
+//		sortOptions_colFocals.
+		sortOptions_colFocals.setMaximumRowCount(40);
+//		sortOptions_colFocals.addActionListener(this);
+		sortOptions_colFocals.setFocusable(false);
+		sortOptions_colFocals.setEnabled(false);
+		gbc.gridx = 2;
+		gbc.gridy = 2;
+		sortOptions.add(sortOptions_colFocals, gbc);
+		
+
 		
 		sortOptions.setVisible(true);
 		gbc.gridx = 0;
 		gbc.gridy = 4;
-		sortOptions_focal.setEnabled(false);
-		sortOptions_type.setEnabled(false);
+		sortOptions_rows.setEnabled(false);
+		sortOptions_table.setEnabled(false);
 		sortOptions.setEnabled(false);
 		sortOptions.setBackground(Color.LIGHT_GRAY);
 		container.add(sortOptions, gbc);
@@ -286,10 +342,10 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		stat.completed();
 	}
 
-	void populateTheList() {
+	void populateTheList(JComboBox box) {
 		
 		String[] theList;
-		TableTypes visopt = (TableTypes)sortOptions_type.getSelectedItem();
+		SortTableType visopt = (SortTableType)sortOptions_table.getSelectedItem();
 	
 		switch (visopt) {
 	
@@ -313,12 +369,20 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		// If objectRelations Tables fail (==null) -> reinstantiate!
 	
 		if(theList != null) {
-			DefaultComboBoxModel modl = new DefaultComboBoxModel(theList);
-			sortOptions_focal.setModel(modl);
+			
+			if( sortOptions_rows.getSelectedItem().equals(SortOptions.FOCAL)) {				
+				DefaultComboBoxModel modl = new DefaultComboBoxModel(theList);
+				box.setModel(modl);
+			}
+			if( sortOptions_cols.getSelectedItem().equals(SortOptions.FOCAL)) {
+				DefaultComboBoxModel modl = new DefaultComboBoxModel(theList);
+				box.setModel(modl);
+			}
+			
 		}
 		else {
-			DefaultComboBoxModel modl = new DefaultComboBoxModel(new String[] {"none"});
-			sortOptions_focal.setModel(modl);
+			sortOptions_rowFocals.setModel(new DefaultComboBoxModel(new String[] {"focal"}));
+			sortOptions_colFocals.setModel(new DefaultComboBoxModel(new String[] {"focal"}));
 		}
 	}
 
@@ -414,42 +478,74 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			exit();
 			
 		}
-		if( e.getSource() == sortOptions_type ) {
+		if( e.getSource() == sortOptions_table ) {
 
-			populateTheList();
+			populateTheList(null);
 		}
-		if( e.getSource() == sortOptions_go || e.getSource() == sortOptions_path || e.getSource() == adcsort) {
+		if( e.getSource() == sortOptions_go ) {
 			
-			doSort(e);
+			doSort();
 		}
 		
-		if( e.getSource() == adcsort ) {
-			
-			sortRelationTableADC();
-			
-		}
+//		if( e.getSource() == adcsort ) {
+//			
+//			sortRelationTableADC();
+//			
+//		}
 		
 		if( e.getSource() == visTable) {
 			
 		    visTable.getSelectedItem();
 			if( visTable.getSelectedItem() == TableTypes.SORTED) {
 
-				sortOptions_focal.setEnabled(true);
-				sortOptions_type.setEnabled(true);
+				sortOptions_rows.setEnabled(true);
+				sortOptions_cols.setEnabled(true);
+				sortOptions_table.setEnabled(true);
+				sortOptions_go.setEnabled(true);
 				sortOptions.setEnabled(true);
 				sortOptions.setBackground(Color.PINK);
 				
-
 			}
 			else {
 				
-				sortOptions_focal.setEnabled(false);
-				sortOptions_type.setEnabled(false);
+				sortOptions_rows.setEnabled(false);
+				sortOptions_rows.setSelectedIndex(0);
+				sortOptions_cols.setEnabled(false);
+				sortOptions_cols.setSelectedIndex(0);
+				sortOptions_table.setEnabled(false);
+				sortOptions_colFocals.setEnabled(false);
+				sortOptions_rowFocals.setEnabled(false);
 				sortOptions.setEnabled(false);
+				sortOptions_go.setEnabled(true);
 				sortOptions.setBackground(Color.LIGHT_GRAY);
 			}
 			dprint("vistable changed");
 		}
+		
+		
+		if( e.getSource().equals(sortOptions_rows )) {
+			
+			if( sortOptions_rows.getSelectedItem() == SortOptions.FOCAL ) {
+				sortOptions_rowFocals.setEnabled(true);
+			} else {
+				sortOptions_rowFocals.setEnabled(false);
+			}
+			populateTheList(sortOptions_rowFocals);
+		}
+		if( e.getSource().equals(sortOptions_cols )) {
+			
+			if( sortOptions_cols.getSelectedItem() == SortOptions.FOCAL ) {
+				sortOptions_colFocals.setEnabled(true);
+			} else {
+				sortOptions_colFocals.setEnabled(false);
+			}
+			populateTheList(sortOptions_colFocals);
+		}
+		
+		
+		
+		
+		
 		if( e.getSource() == mode1 ) {
 			currentVisMode = VisModes.GRID_HARD;
 			save_visualisation.setLabel("save visualisation");
@@ -485,6 +581,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 	
 	public void closeVisFrame() {
 		visFrame.visApplet.destroy();
+		visFrame.visApplet.dispose();
 		visFrame.dispose();
 		visFrame = null;		
 	}
@@ -543,65 +640,150 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		
 	}
 	
-	private void doSort( ActionEvent e ) {
+	private void doSort() {
 		
-		String focal = sortOptions_focal.getSelectedItem().toString(); 
-		TableTypes type = (TableTypes)sortOptions_type.getSelectedItem();
+		SortTableType type  	= (SortTableType)sortOptions_table.getSelectedItem();
+		
+		SortOptions opt_row 	= (SortOptions)sortOptions_rows.getSelectedItem();
+		SortOptions opt_col 	= (SortOptions)sortOptions_cols.getSelectedItem();
+		
+		String focal_r			= sortOptions_rowFocals.getSelectedItem().toString(); 
+		String focal_c			= sortOptions_colFocals.getSelectedItem().toString();	
+		
+		String[] rowIndex;
+		String[] colIndex;
 		
 		
-		if( !focal.equalsIgnoreCase("none") ) {
-			
-			if( e.getSource() == sortOptions_go)    sortRelationTableByFocal(type, focal);
-			if( e.getSource() == sortOptions_path)  {
-				
-				switch (type) {
-				case KEYS:
-					keywordRelations.findPathForFocal(focal, 1000);
-					break;
-				case OBJ_S:
-					objectRelationsSimple.findPathForFocal(focal, 1000);
-				case SORTED:
-					sortedTable.findPathForFocal(focal, 1000);
-				default:
-					break;
-				}
-				
-			}
-		}
-		else {
-			JOptionPane.showMessageDialog(frame,
-				    "no focal point selected!",
-				    "error",
-				    JOptionPane.WARNING_MESSAGE);
-		}
-		
-	}
-
-	void sortRelationTableADC() {
-		
-		TableTypes type = (TableTypes)sortOptions_type.getSelectedItem();
-
+		RelationTable tableToSort;
 		
 		switch (type) {
 		case KEYS:
-			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedTermsByTotalRelatednes(), keywordRelations.getSortedTermsByTotalRelatednes(), "adc" );
-//			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedTermsByOccurences(), "adc" );
+			tableToSort = keywordRelations;
 			break;
 		case OBJ_S:
-			sortedTable = new RelationTable( this, TableTypes.OBJ_S, objectRelationsSimple, objectRelationsSimple.getSortedTermsByTotalRelatednes(), "adc" );
+			tableToSort = objectRelationsSimple;
 			break;
 		case OBJ_M:
-			sortedTable = new RelationTable( this, TableTypes.OBJ_M, objectRelationsMeta, objectRelationsMeta.getSortedTermsByTotalRelatednes(), "adc" );
+			tableToSort = objectRelationsMeta;
 			break;
 		default:
+			tableToSort = null;
 			break;
 		}
 		
-		//for(String a : sortedList) System.out.println(a);
+		switch (opt_row) {
+		case MOST_OCCURANCES:
+			rowIndex = tableToSort.getSortedTermsByOccurences();
+			break;
+		case MOST_RELATED:
+			rowIndex = tableToSort.getSortedTermsByTotalRelatednes();
+			break;
+		case FOCAL:
+			rowIndex = tableToSort.getSortedTerms(focal_r);
+			break;
+		default:
+			rowIndex = null;
+			break;
+		}
+		
+		switch (opt_col) {
+		case MOST_OCCURANCES:
+			colIndex = tableToSort.getSortedTermsByOccurences();
+			break;
+		case MOST_RELATED:
+			colIndex = tableToSort.getSortedTermsByTotalRelatednes();
+			break;
+		case FOCAL:
+			colIndex = tableToSort.getSortedTerms(focal_c);
+			break;
+		default:
+			colIndex = null;
+			break;
+		}
+		
+		TableTypes tbltp = TableTypes.valueOf(type.toString());
+		
+		sortedTable = new RelationTable(this, tbltp, tableToSort, rowIndex, colIndex, focal_r, focal_c);
+		
+//		switch (type) {
+//		
+//		case KEYS:
+//			
+//			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedTerms(focal), focal );
+//			break;
+//			
+//		case OBJ_S:
+//			sortedTable = new RelationTable( this, TableTypes.OBJ_S, objectRelationsSimple, objectRelationsSimple.getSortedTerms(focal), focal );
+//			break;
+//			
+//		case OBJ_M:
+//			sortedTable = new RelationTable( this, TableTypes.OBJ_M, objectRelationsMeta, objectRelationsMeta.getSortedTerms(focal), focal );
+//			break;
+//			
+//		default:
+//			break;
+//		}
+		
 		dprint("sorted Table populated");
 		dprint("");
 		
+		
+		
+		
+		
+//		if( !focal.equalsIgnoreCase("none") ) {
+//			
+//			if( e.getSource() == sortOptions_go)    sortRelationTableByFocal(type, focal);
+//			if( e.getSource() == sortOptions_path)  {
+//				
+//				switch (type) {
+//				case KEYS:
+//					keywordRelations.findPathForFocal(focal, 1000);
+//					break;
+//				case OBJ_S:
+//					objectRelationsSimple.findPathForFocal(focal, 1000);
+//				case SORTED:
+//					sortedTable.findPathForFocal(focal, 1000);
+//				default:
+//					break;
+//				}
+//				
+//			}
+//		}
+//		else {
+//			JOptionPane.showMessageDialog(frame,
+//				    "no focal point selected!",
+//				    "error",
+//				    JOptionPane.WARNING_MESSAGE);
+//		}
+		
 	}
+
+//	void sortRelationTableADC() {
+//		
+//		TableTypes type = (TableTypes)sortOptions_table.getSelectedItem();
+//
+//		
+//		switch (type) {
+//		case KEYS:
+//			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedTermsByTotalRelatednes(), keywordRelations.getSortedTermsByTotalRelatednes(), "adc" );
+////			sortedTable = new RelationTable( this, TableTypes.KEYS, keywordRelations, keywordRelations.getSortedTermsByOccurences(), "adc" );
+//			break;
+//		case OBJ_S:
+//			sortedTable = new RelationTable( this, TableTypes.OBJ_S, objectRelationsSimple, objectRelationsSimple.getSortedTermsByTotalRelatednes(), "adc" );
+//			break;
+//		case OBJ_M:
+//			sortedTable = new RelationTable( this, TableTypes.OBJ_M, objectRelationsMeta, objectRelationsMeta.getSortedTermsByTotalRelatednes(), "adc" );
+//			break;
+//		default:
+//			break;
+//		}
+//		
+//		//for(String a : sortedList) System.out.println(a);
+//		dprint("sorted Table populated");
+//		dprint("");
+//		
+//	}
 	
 	void sortRelationTableByFocal( TableTypes type, String focal) {
 
@@ -619,10 +801,8 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 			break;
 		}
 		
-		//for(String a : sortedList) System.out.println(a);
 		dprint("sorted Table populated");
 		dprint("");
-		//sortedTable.printTable();
 
 	}
 	

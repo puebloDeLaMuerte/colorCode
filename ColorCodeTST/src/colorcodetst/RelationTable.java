@@ -17,7 +17,7 @@ public class RelationTable {
 	private String[] pathForFocal_S;
 	private int[] pathForFocal_I;
 	private TableTypes myType;
-	private String focal;
+	private String focal_r, focal_c, focal_p;
 	private ColorCodeTST parent;
 	
 	RelationTable( ColorCodeTST _parent, TableTypes _Type, String[] terms ) {
@@ -27,7 +27,9 @@ public class RelationTable {
 		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(terms.length,1);
 		index_col = new LinkedHashMap<Integer, String>(terms.length, 1);
 		index_row = new LinkedHashMap<Integer, String>(terms.length, 1);
-		focal = "UNSORTED";
+		focal_r = "UNSORTED";
+		focal_c = "UNSORTED";
+		focal_p = "NO_PATH";
 		myType = _Type;
 		
 		// fill the outer Map with new inner maps (+index)
@@ -43,7 +45,7 @@ public class RelationTable {
 				row.put(terms[i], 0);
 			}
 		}
-		
+		System.out.println();
 	}
 	
 	RelationTable( ColorCodeTST _parent, TableTypes _Type, RelationTable originTable, String[] order, String _focal) {
@@ -53,7 +55,9 @@ public class RelationTable {
 		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(order.length,1);
 		index_col = new LinkedHashMap<Integer, String>(order.length, 1);
 		index_row = new LinkedHashMap<Integer, String>(order.length, 1);
-		focal = _focal;
+		focal_r = _focal;
+		focal_c = "UNSORTED";
+		focal_p = "NO_PATH";
 		
 		if( _Type == TableTypes.SORTED ){
 			
@@ -89,16 +93,18 @@ public class RelationTable {
 		}
 	}
 
-	RelationTable( ColorCodeTST _parent, TableTypes _Type, RelationTable originTable, String[] _orderRows, String[] _orderColumns, String _focal ) {
+	RelationTable( ColorCodeTST _parent, TableTypes _Type, RelationTable originTable, String[] _orderRows, String[] _orderColumns, String _focal_r, String _focal_c ) {
 		
 		parent = _parent;
 		
+		int size = originTable.getRowSize();
 		
-		
-		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(_orderRows.length,1);
-		index_col = new LinkedHashMap<Integer, String>(_orderColumns.length, 1);
-		index_row = new LinkedHashMap<Integer, String>(_orderRows.length, 1);
-		focal = _focal;
+		table = new LinkedHashMap<String, LinkedHashMap<String,Integer>>(size,1);
+		index_col = new LinkedHashMap<Integer, String>(size, 1);
+		index_row = new LinkedHashMap<Integer, String>(size, 1);
+		focal_r = _focal_r;
+		focal_c = _focal_c;
+		focal_p = "NO_PATH";
 		
 		if( _Type == TableTypes.SORTED ){
 			
@@ -108,34 +114,56 @@ public class RelationTable {
 			
 			myType = _Type;
 
-			// set up the rows-index from _orderRows[]
-			for(int i = 0; i<_orderRows.length; i++ ) {
-				index_row.put(i, _orderRows[i]);
+			
+			
+			if ( _orderRows != null ) {
+				// set up the rows-index from _orderRows[]
+				for (int i = 0; i < _orderRows.length; i++) {
+					index_row.put(i, _orderRows[i]);
+				}
+			} else {
+				index_row = originTable.getRowIndex();
 			}
 			
-			// set up the columns-index from _orderColumns[]
-			for(int i = 0; i<_orderColumns.length; i++ ) {
-				index_col.put(i, _orderColumns[i]);
+			
+			if ( _orderColumns != null) {
+				// set up the columns-index from _orderColumns[]
+				for (int i = 0; i < _orderColumns.length; i++) {
+					index_col.put(i, _orderColumns[i]);
+				} 
+			} else {
+				index_col = originTable.getColumnIndex();
 			}
+			
+			System.out.println("a");
+
 			
 			// put empty rows into table for later poputating them with values
-			for(int i=0; i<_orderRows.length; i++) {
-				table.put(_orderRows[i], new LinkedHashMap<String, Integer>(_orderRows.length, 1));
+			
+			for (String key : index_row.values()) {
+				table.put(key, new LinkedHashMap<String, Integer>(index_row.size(), 1));
 			}
+			
+//			for(int i=0; i< index_row.size(); i++) {
+//				table.put(_orderRows[i], new LinkedHashMap<String, Integer>(index_row.size(), 1));
+//			}
 
+			System.out.println("a");
+
+			
 			/* fill each row with the relation-values. 
 			 * The iteration order being taken from index_col
 			 */
 			int c = 0;
 			for (LinkedHashMap<String,Integer> row : table.values()) {
 				for(int i=0; i<index_col.size(); i++) {
-					row.put(index_col.get(i), originTable.getRelation(_orderRows[c], index_col.get(i)));
+					row.put(index_col.get(i), originTable.getRelation(/*_orderRows[c]*/index_row.get(c), index_col.get(i)));
 				}
 				c++;
 			}		
 		}
 		
-		
+		System.out.println("sorted table init done");
 	}
 	
 	public void increaseRelation( String term1, String term2, int increment ) {
@@ -276,7 +304,7 @@ public class RelationTable {
 		}
 		parent.stat.completed();
 
-		focal = _focal;
+		focal_p = _focal;
 		pathForFocal_S = path.toArray(new String[path.size()]);
 		
 		dprint("path length: "+path.size());
@@ -290,7 +318,9 @@ public class RelationTable {
 		
 		System.out.println("...........................................................................");
 		
-		if( focal != null) dprint("This is a sorted relationTable. The focal is: "+focal);
+		if( focal_r != null || focal_c != null || focal_p != null) {
+			dprint("This is a sorted relationTable. The focal is: row:"+focal_r +" column: " + focal_c +" path: " + focal_p);
+		}
 		
 		// Hunderter nach rechts antragen
 		System.out.print("                ");
@@ -393,7 +423,7 @@ public class RelationTable {
 		
 		ArrayList<String> returnList = new ArrayList<String>();
 		
-		int max = getMaxValueFor(focal);
+		int max = getMaxValueForInclusiveSelf(focal);
 		
 		if( max == 0 ) {
 			dprint("THERE IS NO VALUES FOR THIS FOCAL !!");
@@ -411,9 +441,7 @@ public class RelationTable {
 				
 			}
 		}
-		
-		System.out.println("sort complete");
-		
+				
 		return returnList.toArray(new String[returnList.size()]);
 	}
 	
@@ -540,7 +568,7 @@ public class RelationTable {
 		ArrayList<Integer> values = new ArrayList<Integer>();
 
 		LinkedHashMap<String, Integer> row = table.get(_focal);
-		int min = getMaxValueFor(_focal);
+		int min = getMaxValueForExclusiveSelf(_focal);
 		int tst;
 		
 		// finding top values
@@ -573,7 +601,7 @@ public class RelationTable {
 		return returnArray;
 	}
 	
-	public int getMaxValueFor(String _focal) {
+	public int getMaxValueForExclusiveSelf(String _focal) {
 		
 		int mx = 0;
 		int tst;
@@ -584,6 +612,20 @@ public class RelationTable {
 				if (mx < tst)
 					mx = tst;
 			}
+		}
+				
+		return mx;
+	}
+	
+	public int getMaxValueForInclusiveSelf(String _focal) {
+		
+		int mx = 0;
+		int tst;
+		for(int i=0; i<index_col.size(); i++) {
+			
+			tst = table.get(_focal).get(index_col.get(i));
+			if (mx < tst)
+				mx = tst;
 		}
 				
 		return mx;
@@ -611,9 +653,27 @@ public class RelationTable {
 	
 	public String getFocal() {
 		
-		if(focal != null && !focal.equalsIgnoreCase("")) return focal;
-		else if( focal != null && focal.equalsIgnoreCase("") ) return "unsorted table";
-		else return "focal: null";
+		String ret = "";
+		
+		if( ! focal_r.equals("UNSORTED") ) {
+			ret += "row: " + focal_r +" ";
+		}
+		if( ! focal_c.equals("UNSORTED") ) {
+			ret += "col: " + focal_c + " ";
+		}
+		if( !focal_p.equals("NO_PATH") ) {
+			ret += "path: " + focal_p;
+		}
+		
+		if( ret.equals("")) {
+			return "unsorted table";
+		} else {
+			return ret;
+		}
+		
+//		if(focal != null && !focal.equalsIgnoreCase("")) return focal;
+//		else if( focal != null && focal.equalsIgnoreCase("") ) return "unsorted table";
+//		else return "focal: null";
 	}
 	
 	public boolean hasPath() {
