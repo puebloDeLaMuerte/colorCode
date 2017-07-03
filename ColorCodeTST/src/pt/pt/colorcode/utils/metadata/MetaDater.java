@@ -24,11 +24,11 @@ public class MetaDater {
 
 		BufferedWriter writer = new BufferedWriter( new FileWriter( file.getAbsolutePath()) );
 		
-		writer.write("########################################################################\n");
-		writer.write("#                                                                      #\n");
-		writer.write("#   Metadata for colorCode Project by Philipp Tögel and Monai Antunes  #\n");
-		writer.write("#                                                                      #\n");
-		writer.write("########################################################################\n\n\n\n");
+		writer.write("#################################################################################\n");
+		writer.write("#                                                                               #\n");
+		writer.write("#   Metadata for colorCode Project by Philipp Tögel and Monai de Paula Antunes  #\n");
+		writer.write("#                                                                               #\n");
+		writer.write("#################################################################################\n\n\n\n");
 		
 		
 		int maxSize = 0;

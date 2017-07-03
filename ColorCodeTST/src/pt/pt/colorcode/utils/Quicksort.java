@@ -14,6 +14,8 @@ public class Quicksort  {
     
     public String[] sortHashMapByValue(LinkedHashMap<String, Integer> data) {
     	
+    	long sortstart = System.currentTimeMillis();
+    	
     	if (data ==null || data.size()==0){
             return null;
         }
@@ -26,7 +28,7 @@ public class Quicksort  {
     		vals[i] = new SortElement(e.getKey(), e.getValue());
     		i++;
     		
-    		System.out.println(e.getKey() + ": " + e.getValue());
+//    		System.out.println(e.getKey() + ": " + e.getValue());
     	}
     	
     	
@@ -40,8 +42,10 @@ public class Quicksort  {
 
     		ret[j] = (String)vals[vals.length-j-1].getObject();
     		
-    		System.out.println(ret[j] + ": " + vals[j].getValue());
+//    		System.out.println(ret[j] + ": " + vals[j].getValue());
 		}
+    	
+    	System.out.println("sorting time: " + (System.currentTimeMillis() - sortstart) );
     	
     	return ret;
     }

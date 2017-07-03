@@ -1764,6 +1764,7 @@ public class VisApplet extends PApplet implements VisInterface{
 		}
 		
 	 	public boolean saveVisualisation(boolean _askForName, String _suggestedName) {
+	 		
 			if(graphics != null) {
 				//System.out.println("SICHER IST SICHER");
 				
