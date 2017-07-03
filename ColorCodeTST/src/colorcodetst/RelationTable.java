@@ -2,9 +2,9 @@ package colorcodetst;
 
 import java.util.*;
 
-import MyUtils.Quicksort;
-import MyUtils.StatusGui;
-import MyUtils.TableTypes;
+import pt.pt.colorcode.utils.Quicksort;
+import pt.pt.colorcode.utils.StatusGui;
+import pt.pt.colorcode.utils.TableTypes;
 
 
 public class RelationTable {

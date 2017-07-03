@@ -14,11 +14,11 @@ import processing.core.PGraphics;
 import processing.core.PImage;
 import processing.core.PVector;
 import processing.data.XML;
-import MyUtils.SortOptions;
-import MyUtils.SortTableType;
-import MyUtils.StatusGui;
-import MyUtils.VisModes;
-import MyUtils.TableTypes;
+import pt.pt.colorcode.utils.SortOptions;
+import pt.pt.colorcode.utils.SortTableType;
+import pt.pt.colorcode.utils.StatusGui;
+import pt.pt.colorcode.utils.TableTypes;
+import pt.pt.colorcode.utils.VisModes;
 
 public class ColorCodeTST extends PApplet implements ActionListener {
 	
@@ -48,6 +48,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 	public VisModes currentVisMode;
 			
 	public String dataFolderPath;
+	public String outputFolderPath;
 	
 	// depricated:
 	private XMLdatabase 	flussData;
@@ -85,6 +86,12 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		dataFolderPath = dataFolderPath.substring(0, dataFolderPath.length()-1);
 		dataFolderPath = dataFolderPath.concat("src/data/");
 		dprint("Data-Folder path: "+dataFolderPath);
+		
+		outputFolderPath = rootFolder.getAbsolutePath();
+		outputFolderPath = outputFolderPath.substring(0, outputFolderPath.length()-1);
+		outputFolderPath = outputFolderPath.concat("output/");
+		dprint("Output-Folder path: "+outputFolderPath);
+		
 		stat.completed();
 				
 		
@@ -254,7 +261,7 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 		gbc.gridy = 0;
 		sortOptions.add(c, gbc);
 		
-		sortOptions_table = new JComboBox(MyUtils.SortTableType.values());
+		sortOptions_table = new JComboBox(pt.pt.colorcode.utils.SortTableType.values());
 		sortOptions_table.addActionListener(this);
 		sortOptions_table.setFocusable(false);
 		gbc.gridx = 0;

@@ -1,4 +1,4 @@
-package MyUtils;
+package pt.pt.colorcode.utils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

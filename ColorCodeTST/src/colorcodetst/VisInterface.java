@@ -1,8 +1,8 @@
 package colorcodetst;
 
 import processing.core.PGraphics;
-import MyUtils.TableTypes;
-import MyUtils.VisModes;
+import pt.pt.colorcode.utils.TableTypes;
+import pt.pt.colorcode.utils.VisModes;
 
 
 public interface VisInterface{
@@ -19,6 +19,8 @@ public interface VisInterface{
 	public TableTypes getCurrentTableType();
 	
 	public void visualize(RelationTable _table);
+	
+	public boolean isUpdateable();
 	
 	public void updateFrame();
 	

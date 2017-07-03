@@ -3,6 +3,7 @@ package colorcodetst;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
@@ -13,17 +14,17 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 
-
-import MyUtils.StatusGui;
-import MyUtils.VisModes;
-import MyUtils.TableTypes;
-
 import processing.core.PApplet;
 import processing.core.PFont;
 import processing.core.PGraphics;
 import processing.core.PImage;
 import processing.core.PVector;
 import processing.event.MouseEvent;
+import pt.pt.colorcode.utils.StatusGui;
+import pt.pt.colorcode.utils.TableTypes;
+import pt.pt.colorcode.utils.VisModes;
+import pt.pt.colorcode.utils.metadata.DataField;
+import pt.pt.colorcode.utils.metadata.MetaDater;
 
 public class VisApplet extends PApplet implements VisInterface{
 	
@@ -60,6 +61,9 @@ public class VisApplet extends PApplet implements VisInterface{
 		}
 		else if ( display != null ) {	
 			image(display,0,0,width, height);
+//			background(display);
+//			set(0, 0, display);
+//			display = null;
 		}
 		else System.out.println("visApplet seems to be NULL...");
 		
@@ -68,19 +72,23 @@ public class VisApplet extends PApplet implements VisInterface{
 			visInterface.visualize(tableToVisualize);
 			tableToVisualize = null;
 		}
+		
+		if( visInterface != null && visInterface.getClass().equals(Nebular.class) ) {
+
+			if( visInterface.isUpdateable() ) {
+			
+				if(!pauseToggle) visInterface.updateFrame();
+				
+				visInterface.drawFrame();
+				display = visInterface.getVisualisationGraphics();
+				image(display,0,0,width, height);
+			}
+		}
+		
 		if( doNewVisualisation && tableToVisualize == null && visInterface != null && visInterface.hasVisual() ) {
 			
 			display = visInterface.getVisualisationGraphics();
 			doNewVisualisation = false;
-		}
-		
-		if( frameCount != 0 && visInterface != null && visInterface.getVisMode() == VisModes.NEBULAR /*&& visInterface.hasVisual()*/) {
-			
-			if(!pauseToggle) visInterface.updateFrame();
-			visInterface.drawFrame();
-			display = visInterface.getVisualisationGraphics();
-			image(display,0,0,width, height);
-			//System.out.println("frame updated");
 		}
 		
 		if(pauseToggle) {
@@ -139,7 +147,7 @@ public class VisApplet extends PApplet implements VisInterface{
 	}
 	
 	@Override
-	public MyUtils.TableTypes getCurrentTableType() {
+	public pt.pt.colorcode.utils.TableTypes getCurrentTableType() {
 		if( visInterface != null ) {
 			return visInterface.getCurrentTableType();
 		}
@@ -205,9 +213,9 @@ public class VisApplet extends PApplet implements VisInterface{
 		return null;
 	}
 	
-	private void setVisualisationGraphics( PGraphics _g) {
-		display = _g;
-	}
+//	private void setVisualisationGraphics( PGraphics _g) {
+//		display = _g;
+//	}
 	
 	@Override
 	public void setDisplayZoomValue(float _zoom) {
@@ -285,9 +293,11 @@ public class VisApplet extends PApplet implements VisInterface{
 		private VisModes 		myVismode = VisModes.NEBULAR;
 		private boolean			save = false;
 		private String			folderName;
+		private String			fileName;
 		
 		private TableTypes 		myTablesType;
 		private boolean 		visBool = false;
+		private boolean			prepared = false;
 		private RelationTable 	myTable;
 		private PGraphics 		graphics;
 
@@ -297,7 +307,8 @@ public class VisApplet extends PApplet implements VisInterface{
 		private Element[] elements;
 		private float maxPosition;
 		
-		private float maximumInitialSpread = 80;
+//		private float maximumInitialSpread = 200;//80;
+		private float maximumInitialSpread = 160;
 		
 		private float maximumDrawSpread = 200;
 //		private float maximumDrawSpread = 18;
@@ -413,7 +424,43 @@ public class VisApplet extends PApplet implements VisInterface{
 				}
 
 			}
-
+			
+			if( save ) {
+				
+				ArrayList<DataField> list = new ArrayList<DataField>();
+				
+				list.add(new DataField("vismode", myVismodeString) );
+				list.add( new DataField("filename", fileName));
+				DateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm");
+				Date date = new Date();
+				list.add( new DataField("datecreated", date.toString()) );
+				list.add( new DataField("canvassize", visualisationSize) );
+				
+				
+				list.add(new DataField("tabletype", myTablesType.toString() ) );
+				list.add( new DataField("tablesize", myTable.getRowSize()) );
+				list.add( new DataField("elementscount", elements.length) );
+				list.add( new DataField("initialspread", maximumInitialSpread) );
+				list.add( new DataField("maxdrawspread", maximumDrawSpread) );
+				list.add( new DataField("influencefactor", influenceFactor) );
+				list.add( new DataField("repulsionrate", repulsionRate) );
+			
+				String filename = folderName + "/" + fileName + "_metadata.txt"; 
+				try {
+					MetaDater.saveMetadataToFile(new File(filename), list);
+					System.out.println("metadata saved to file: filename");
+				} catch (IOException e) {
+					System.err.println("error during metadata saving");
+					e.printStackTrace();
+				}
+			}
+			
+			prepared = true;
+		}
+		
+		public boolean isUpdateable() {
+			
+			return prepared;
 		}
 		
 		public void updateFrame() {
@@ -443,7 +490,7 @@ public class VisApplet extends PApplet implements VisInterface{
 //			System.out.println("draw time: " + drawTime);
 			
 			if (save && !pauseToggle) {
-				saveVisualisation(false, folderName+"/"+myTablesType + "_Nebular_" + nfs(saveFrameCount++, 5));
+				saveVisualisation(false, folderName+"/"+ fileName+ "_" + nfs(saveFrameCount++, 5));
 			}
 			
 		}
@@ -732,29 +779,32 @@ public class VisApplet extends PApplet implements VisInterface{
 		}
 
 		@Override
-		public boolean saveVisualisation(boolean _askForName,
-				String _suggestedName) {
+		public boolean saveVisualisation(boolean _askForName, String _suggestedName) {
+
 			if(graphics != null) {
 				//System.out.println("SICHER IST SICHER");
-				
-				String input;
-				if (_askForName) {
-					input = JOptionPane.showInputDialog("please input filename", _suggestedName);
-				}
-				else {
-					input = _suggestedName;
-				}
-				
-				if( input == null ) { return false; }
-				
-				if( input != null ) {
-					graphics.save(pa.dataFolderPath+input+".jpg");
-					//visApplet.save(input+".jpg");
-					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
-					
-				}
+
+				//				String input;
+				//				if (_askForName) {
+				//					input = JOptionPane.showInputDialog("please input filename", _suggestedName);
+				//				}
+				//				else {
+				//					input = _suggestedName;
+				//				}
+				//				
+				//				if( input == null ) { return false; }
+				//				
+				//				if( input != null ) {
+
+				String s = new File(_suggestedName).getAbsolutePath()  ;
+
+				graphics.save(s + ".jpg");
+				//visApplet.save(input+".jpg");
+				System.out.println("SAVED AS: "+ s);
+
 				return true;
 			}
+
 			else {
 				System.err.println("NO VISUALISATION TO SAVE");
 				return false;
@@ -788,19 +838,37 @@ public class VisApplet extends PApplet implements VisInterface{
 		public void setSave(boolean b) {
 			
 			save = b;
+			String TMPfolderName, TMPfileName;
 			
 			if (save == true) {
 				DateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm");
 				Date date = new Date();
-				String input = JOptionPane.showInputDialog("please input folder name", dateFormat.format(date) + "_" + myTablesType + "_" + myVismodeString);
+				
+				
+				TMPfolderName = pa.outputFolderPath +  dateFormat.format(date) + "_" + myTablesType + "_" + myVismodeString;
+				TMPfileName = myTablesType + "_Nebular";
+				
+				String input = JOptionPane.showInputDialog("please input folder name", TMPfolderName);
 
-				if( input == null) {
+				while(input == null ) {
+					try {
+						Thread.sleep(20);
+						System.out.println("waiting");
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
+				
+				if( input.equalsIgnoreCase("")) {
 					
 					save = false;
 					pa.setSaveButtonState(false);
 				} else {
 					
 					folderName = input;
+					fileName = TMPfileName;
 				}
 			}
 			
@@ -952,9 +1020,9 @@ public class VisApplet extends PApplet implements VisInterface{
 				if( input == null ) { return false; }
 				
 				if( input != null ) {
-					graphics.save(pa.dataFolderPath+input+".jpg");
+					graphics.save(pa.outputFolderPath+input+".jpg");
 					//visApplet.save(input+".jpg");
-					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
+					System.out.println("SAVED AS: "+pa.outputFolderPath+input+".jpg");
 					
 				}
 				return true;
@@ -1014,6 +1082,12 @@ public class VisApplet extends PApplet implements VisInterface{
 				myTablesType = _type;
 				return true;
 			}
+		}
+
+		@Override
+		public boolean isUpdateable() {
+			// TODO Auto-generated method stub
+			return false;
 		}
 
 		
@@ -1113,7 +1187,11 @@ public class VisApplet extends PApplet implements VisInterface{
 
 			int xySize = margin + ( cellSize * noOfCells );
 
-			this.graphics = createGraphics(100, 100);
+			if( graphics == null ) {
+				this.graphics = createGraphics(100, 100);				
+			}
+			
+			
 			fnt = createFont("Perfect DOS VGA 437.ttf", cellSize-2, true);
 
 			this.graphics.setSize(xySize, xySize);
@@ -1184,9 +1262,9 @@ public class VisApplet extends PApplet implements VisInterface{
 				if( input == null ) { return false; }
 				
 				if( input != null ) {
-					graphics.save(pa.dataFolderPath+input+".jpg");
+					graphics.save(pa.outputFolderPath+input+".jpg");
 					//visApplet.save(input+".jpg");
-					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
+					System.out.println("SAVED AS: "+pa.outputFolderPath+input+".jpg");
 					
 				}
 				return true;
@@ -1210,7 +1288,9 @@ public class VisApplet extends PApplet implements VisInterface{
 	 	}
 
 		public PGraphics getVisualisationGraphics() {
-			if( visBool) return graphics;
+			if( visBool) {
+				return graphics;
+			}
 			else return null;
 		}
 
@@ -1247,6 +1327,12 @@ public class VisApplet extends PApplet implements VisInterface{
 				myTablesType = _type;
 				return true;
 			}
+		}
+
+		@Override
+		public boolean isUpdateable() {
+			// TODO Auto-generated method stub
+			return false;
 		}
 
 	}
@@ -1434,9 +1520,9 @@ public class VisApplet extends PApplet implements VisInterface{
 				if( input == null ) { return false; }
 				
 				if( input != null ) {
-					graphics.save(pa.dataFolderPath+input+".jpg");
+					graphics.save(pa.outputFolderPath+input+".jpg");
 					//visApplet.save(input+".jpg");
-					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
+					System.out.println("SAVED AS: "+pa.outputFolderPath+input+".jpg");
 					
 				}
 				return true;
@@ -1497,6 +1583,12 @@ public class VisApplet extends PApplet implements VisInterface{
 				myTablesType = _type;
 				return true;
 			}
+		}
+
+		@Override
+		public boolean isUpdateable() {
+			// TODO Auto-generated method stub
+			return false;
 		}
 
 	}
@@ -1686,9 +1778,9 @@ public class VisApplet extends PApplet implements VisInterface{
 				if( input == null ) { return false; }
 				
 				if( input != null ) {
-					graphics.save(pa.dataFolderPath+input+".jpg");
+					graphics.save(pa.outputFolderPath+input+".jpg");
 					//visApplet.save(input+".jpg");
-					System.out.println("SAVED AS: "+pa.dataFolderPath+input+".jpg");
+					System.out.println("SAVED AS: "+pa.outputFolderPath+input+".jpg");
 					
 				}
 				return true;
@@ -1752,7 +1844,19 @@ public class VisApplet extends PApplet implements VisInterface{
 			}
 		}
 
+		@Override
+		public boolean isUpdateable() {
+			// TODO Auto-generated method stub
+			return false;
+		}
 
+
+	}
+
+	@Override
+	public boolean isUpdateable() {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 	

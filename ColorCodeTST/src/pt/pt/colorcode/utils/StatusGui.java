@@ -1,4 +1,4 @@
-package MyUtils;
+package pt.pt.colorcode.utils;
 
 import java.awt.Dimension;
 import java.awt.Toolkit;
