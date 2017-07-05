@@ -12,7 +12,9 @@ import javax.swing.JOptionPane;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Set;
 
 import processing.core.PApplet;
 import processing.core.PFont;
@@ -25,6 +27,8 @@ import pt.pt.colorcode.utils.TableTypes;
 import pt.pt.colorcode.utils.VisModes;
 import pt.pt.colorcode.utils.metadata.DataField;
 import pt.pt.colorcode.utils.metadata.MetaDater;
+import pt.pt.colorcode.utils.quicksort.Quicksort;
+import pt.pt.colorcode.utils.quicksort.SortElement;
 
 public class VisApplet extends PApplet implements VisInterface{
 	
@@ -304,12 +308,13 @@ public class VisApplet extends PApplet implements VisInterface{
 		private float zoomfactor = 1;
 		private int xOffset = 0, yOffset = 0;
 		
-		private Element[] elements;
+		private Element[] elements, sortedElementsX, sortedElementsY;
 		private float maxPosition;
 		
 //		private float maximumInitialSpread = 200;//80;
 		private float maximumInitialSpread = 160;
 		
+		private int   maximumDistanceAffected = 14;
 		private float maximumDrawSpread = 200;
 //		private float maximumDrawSpread = 18;
 //		private float maximumDrawSpread = 1199800;
@@ -397,6 +402,8 @@ public class VisApplet extends PApplet implements VisInterface{
 				}
 				elements = elementsList.toArray(new Element[elemCount]);
 			}
+			
+			
 
 			//   Put only single Elemnts for visualisation
 			else {
@@ -424,6 +431,11 @@ public class VisApplet extends PApplet implements VisInterface{
 				}
 
 			}
+			
+			sortedElementsX = new Element[elements.length];
+			sortedElementsY = new Element[elements.length];
+			
+			
 			
 			if( save ) {
 				
@@ -467,9 +479,50 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 			long updateStart = millis();
 			
-			for( Element e : elements) {
-				e.findDirection();
+			// Timer
+//			double Sorting_start = System.nanoTime();
+			
+			SortElement[] elemsX = new SortElement[elements.length];
+//			SortElement[] elemsY = new SortElement[elements.length];
+			
+			for (int i = 0; i < elemsX.length; i++) {
+
+				elemsX[i] = new SortElement(elements[i], elements[i].getXpos());
+//				elemsY[i] = new SortElement(elements[i], elements[i].getYpos());
 			}
+			
+			Quicksort.sort(elemsX);
+//			Quicksort.sort(elemsY);
+			
+			int x = 0;
+			
+			for (SortElement sortElement : elemsX) {
+				sortedElementsX[x] = (Element) sortElement.getObject();
+				sortedElementsX[x].setIndexX(x);
+				//				System.out.println(x+": "+sortedElementsX[x].getXpos());
+				x++;
+			}
+//			x = 0;
+//			for (SortElement sortElement : elemsY) {
+//				sortedElementsY[x] = (Element) sortElement.getObject();
+//				sortedElementsY[x].setIndexY(x);
+////								System.out.println(x+": "+sortedElementsY[x].getYpos());
+//				x++;
+//			}
+//			System.out.println("measured time for Sorting X: " + ((System.nanoTime() - Sorting_start) / 1000000d) + " milliseconds");
+//			System.out.println("X: sortElement[]: "+elemsX.length +" Element[]: " + sortedElementsX.length);
+//			System.out.println("Y: sortElement[]: "+elemsY.length +" Element[]: " + sortedElementsY.length);
+
+			
+			
+//			System.out.println("\n\n\n\n");
+			
+			
+			
+			for( Element e : elements) {
+				e.findDirectionSorted();
+			}
+			
 //			maxPosition = 0;
 			maxPosition = 500;
 			for( Element e : elements) {
@@ -581,6 +634,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			private int			myTermHash;
 			private int 		myLoveLevel;
 			private PVector 	myPos, myDirection;
+			private int			myIndexX, myIndexY;
 			private Color 		myColor;
 			private int 		myID;
 			
@@ -632,6 +686,161 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				return new PVector( random(-maximumInitialSpread, maximumInitialSpread), random(-maximumInitialSpread, maximumInitialSpread) );
 				
+			}
+			
+			public void findDirectionSorted() {
+								
+				
+				// motion damper:
+				myDirection.mult(0.7f);
+				
+				
+				// Timer
+//				double SortBoundaryFinder_start = System.nanoTime();
+				int[] Xbounds = findSortBoundaryX();
+//				int[] Ybounds = findSortBoundaryY();
+//				System.out.println("measured time for SortBoundaryFinder : " + ((System.nanoTime() - SortBoundaryFinder_start) / 1000000d) + " milliseconds");
+//				System.out.println(Xbounds[0] +" / " + Xbounds[1]);
+
+				
+				
+				
+				// approach: sorted array compare:
+				
+//				int[] Ybounds = findSortBoundaryY();
+				
+//				hashCompare(Xbounds, Xbounds);
+				
+//				System.out.println("\n\n\n\n");
+				
+				
+				// approach: first sort the remaining values by Y and then cut out the middle of that
+				
+				
+//				SortElement[] elemsY = new SortElement[Xbounds[1] + (Xbounds[0]*-1) ];
+//				int j = 0;
+//				for(int i = myIndexX + Xbounds[0];  i < myIndexX + Xbounds[1];  i++ ) {
+//					elemsY[j] = new SortElement(sortedElementsX[i], sortedElementsX[i].getYpos());
+//					j++;
+//				}
+//				
+//				Quicksort.sort(elemsY);
+//				
+//				sortedElementsY = new Element[elemsY.length];
+//				
+//				int x = 0;
+//				for (SortElement sortElement : elemsY) {
+//					sortedElementsY[x] = (Element)sortElement.getObject();
+//					sortedElementsY[x].setIndexY(x);
+////					System.out.println(x+": "+sortedElementsX[x].getXpos());
+//					x++;
+//				}
+//				
+//				int[] Ybounds = findSortBoundaryY();
+//				
+//				
+//
+//				for(int i = myIndexY + Ybounds[0];  i < myIndexY + Ybounds[1];  i++ ) {
+				for(int i = myIndexX + Xbounds[0];  i < myIndexX + Xbounds[1];  i++ ) {
+					
+					Element e = sortedElementsX[i];
+					
+					// TODO take into account the special love i have
+					// TODO take into account the others special love
+					
+					if ( /*myID != e.getID() && */ myTermHash != e.getTermHash() ) {
+					
+												
+						PVector thisInfluenceDirection = new PVector(e.getPos().x, e.getPos().y);
+						thisInfluenceDirection.sub(myPos);
+						
+						float thisDistance = thisInfluenceDirection.magSq();
+						float thisrealDistance = thisInfluenceDirection.mag();
+						
+						if( thisDistance < (maximumDrawSpread) ) {
+							
+
+							thisInfluenceDirection.normalize();
+
+							int thisRelation =  myTable.getRelation( myTerm, e.getTerm());
+							
+							float thisInfluenceMag = 1 / (thisRelation + 0.000001f);
+							
+							thisInfluenceMag = thisInfluenceMag / thisDistance * influenceFactor * -1;
+
+
+							thisInfluenceDirection.mult(thisInfluenceMag);
+
+							myDirection.add(thisInfluenceDirection);
+						}
+					}
+					
+				}
+			}
+			
+			private void hashCompare(int[] x, int[] y) {
+				
+				ArrayList<Element> ret = new ArrayList<Element>();
+				
+				
+				
+				//convert arr1 to java.util.Set
+				Set<Element> set1 = new HashSet<Element>();
+				
+				for (int i = myIndexX + x[0];  i < myIndexX + x[1];  i++ ) {
+					set1.add(sortedElementsX[i]);
+				}
+
+				// print the duplicates
+				for (int i = myIndexY + y[0];  i < myIndexY + y[1];  i++ ) {
+					if (set1.contains(sortedElementsY[i])) {
+						System.out.println(sortedElementsY[i].getXpos() +" / " + sortedElementsY[i].getYpos()); // print 10 20
+					}
+				}
+			}
+			
+			private int[] findSortBoundaryX() {
+				
+//				TODO  implement a faster way to find the boundary
+//				
+//				int 	steps		= 4;
+//				boolean positive	= false;
+				
+				int negBound = 0;
+				int posBound = sortedElementsX.length;
+
+				for( int i = myIndexX; myPos.x - sortedElementsX[i].getXpos() <= maximumDistanceAffected && i > 0  ;i--) negBound = i;
+				
+				for( int i = myIndexX; sortedElementsX[i].getXpos() - myPos.x <= maximumDistanceAffected && i < sortedElementsX.length-2  ;i++) posBound = i;
+				
+				negBound -= myIndexX;
+				posBound -= myIndexX;
+				
+				return new int[] {negBound, posBound};
+			}
+			
+			private int[] findSortBoundaryY() {
+				
+//				TODO  implement a faster way to find the boundary
+//				
+//				int 	steps		= 4;
+//				boolean positive	= false;
+				
+				int negBound = 0;
+				int posBound = sortedElementsY.length;
+				
+//				System.out.println("LENGTH: " + sortedElementsY.length);
+
+				for( int i = myIndexY; myPos.y - sortedElementsY[i].getYpos() <= maximumDistanceAffected && i > 0  ;i--) negBound = i;
+				
+				for( int i = myIndexY; sortedElementsY[i].getYpos() - myPos.y <= maximumDistanceAffected && i < sortedElementsY.length-1  ;i++) posBound = i;
+				
+				negBound -= myIndexY;
+				posBound -= myIndexY;
+				
+//				System.out.println(negBound + "  " +posBound);
+				
+				return new int[] {negBound, posBound};
 			}
 			
 			public void findDirection() {
@@ -732,6 +941,22 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 			public int getID() {
 				return myID;
+			}
+			
+			public int getIndexX() {
+				return myIndexX;
+			}
+
+			public void setIndexX(int indexX) {
+				this.myIndexX = indexX;
+			}
+
+			public int getIndexY() {
+				return myIndexY;
+			}
+
+			public void setIndexY(int indexY) {
+				this.myIndexY = indexY;
 			}
 		
 			

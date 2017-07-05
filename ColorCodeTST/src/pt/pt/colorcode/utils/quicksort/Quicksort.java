@@ -1,4 +1,4 @@
-package pt.pt.colorcode.utils;
+package pt.pt.colorcode.utils.quicksort;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -7,14 +7,10 @@ public class Quicksort  {
 
 	// taken and adapted from http://www.vogella.com/tutorials/JavaAlgorithmsQuicksort/article.html
 	// well, thanks!
-	
-	private SortElement[] elements;
-    private int length;
     
     
-    public String[] sortHashMapByValue(LinkedHashMap<String, Integer> data) {
+    public static String[] sortHashMapByValue(LinkedHashMap<String, Integer> data) {
     	
-    	long sortstart = System.currentTimeMillis();
     	
     	if (data ==null || data.size()==0){
             return null;
@@ -45,25 +41,31 @@ public class Quicksort  {
 //    		System.out.println(ret[j] + ": " + vals[j].getValue());
 		}
     	
-    	System.out.println("sorting time: " + (System.currentTimeMillis() - sortstart) );
     	
     	return ret;
     }
 
-    private void sort(SortElement[] values) {
-        // check for empty or null array
-        if (values ==null || values.length==0){
-            return;
-        }
-        this.elements = values;
-        length = values.length;
-        quicksort(0, length - 1);
+    public static void sort(SortElement[] values) {
+    	
+    	// check for empty or null array
+    	if (values ==null || values.length==0){
+    		return;
+    	}
+    	
+//    	long sortstart = System.currentTimeMillis();    
+//    	long sortstart = System.nanoTime() ;
+    	
+        quicksort(values, 0, values.length - 1);
+        
+//    	System.out.println("sorting time: " + (System.currentTimeMillis() - sortstart) );
+//    	System.out.println("sorting time: " + (double)((System.nanoTime()- sortstart) / 1000000d ) );
+
     }
 
-    private void quicksort(int low, int high) {
+    private static void quicksort(SortElement[] elements, int low, int high) {
         int i = low, j = high;
         // Get the pivot element from the middle of the list
-        int pivot = elements[low + (high-low)/2].getValue();
+        float pivot = elements[low + (high-low)/2].getValue();
 
         // Divide into two lists
         while (i <= j) {
@@ -84,42 +86,28 @@ public class Quicksort  {
             // values.
             // As we are done we can increase i and j
             if (i <= j) {
-                exchange(i, j);
+                exchange(elements, i, j);
                 i++;
                 j--;
             }
         }
         // Recursion
         if (low < j)
-            quicksort(low, j);
+            quicksort(elements, low, j);
         if (i < high)
-            quicksort(i, high);
+            quicksort(elements, i, high);
     }
 
-    private void exchange(int i, int j) {
+    private static void exchange(SortElement[] elements, int i, int j) {
         SortElement temp = elements[i];
         elements[i] = elements[j];
         elements[j] = temp;
     }
     
-    private class SortElement {
-    	
-    	
-    	private int value;
-    	private Object name;
-    	
-    	public SortElement(String name, int value) {
-    		this.name = name;
-    		this.value = value;
-    	}
-    	
-    	public int getValue() {
-    		return value;
-    	}
-    	
-    	public Object getObject() {
-    		return name;
-    	}
-    }
+//    public static SortElement newSortElement(Object o, int val) {
+//    	return new SortElement(0,val);
+//    }
+    
+    
     
 }
