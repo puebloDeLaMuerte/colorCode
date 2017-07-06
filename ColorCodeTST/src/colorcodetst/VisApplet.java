@@ -177,6 +177,14 @@ public class VisApplet extends PApplet implements VisInterface{
 	
 	private void changeVisMode( VisModes _mode ) {
 		
+		System.out.println("changing visMode");
+		
+		if( visInterface != null ) {
+			visInterface.destroy();
+			visInterface = null;
+			System.gc();
+		}
+		
 		switch (_mode) {
 		case GRID_HARD:
 			visInterface = new GridHard();
@@ -285,7 +293,16 @@ public class VisApplet extends PApplet implements VisInterface{
 		// TODO Auto-generated method stub
 		return false;
 	}
-		
+	
+	@Override
+	public void destroy() {
+		this.visInterface.destroy();
+		this.visInterface = null;
+		this.pa = null;
+		this.display = null;
+		super.destroy();
+	}
+	
 	//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||//||\\||
 
 	
@@ -308,7 +325,11 @@ public class VisApplet extends PApplet implements VisInterface{
 		private float zoomfactor = 1;
 		private int xOffset = 0, yOffset = 0;
 		
+		private long	meanUpdateTime = -1;;
+		
 		private Element[] elements, sortedElementsX, sortedElementsY;
+		int prevboundMin;
+		int prevboundMax;
 		private float maxPosition;
 		
 //		private float maximumInitialSpread = 200;//80;
@@ -337,6 +358,8 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		private long updateTime = 0;
 		private long drawTime	= 0;
+
+		public int influences;
 		
 		
 		public Nebular(){
@@ -435,6 +458,8 @@ public class VisApplet extends PApplet implements VisInterface{
 			sortedElementsX = new Element[elements.length];
 			sortedElementsY = new Element[elements.length];
 			
+			int prevboundMin = 0;
+			int prevboundMax = elements.length;
 			
 			
 			if( save ) {
@@ -477,7 +502,10 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		public void updateFrame() {
 			
+			
+			
 			long updateStart = millis();
+			influences = 0;
 			
 			// Timer
 //			double Sorting_start = System.nanoTime();
@@ -517,10 +545,13 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 //			System.out.println("\n\n\n\n");
 			
+			prevboundMin = 0;
+			prevboundMax = 0;
 			
 			
-			for( Element e : elements) {
+			for( Element e : sortedElementsX) {
 				e.findDirectionSorted();
+//				System.out.println(e.getIndexX() + ": " + prevboundMin);
 			}
 			
 //			maxPosition = 0;
@@ -533,7 +564,19 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 			updateCount++;
 			updateTime = millis() - updateStart;
-			System.out.println("update time: " + updateTime);
+			
+			if( updateCount < 2 ) {
+				meanUpdateTime = updateTime; 
+			} else  {
+				meanUpdateTime = (long)(meanUpdateTime / 10 * 9) + (long)(updateTime / 10);
+			}
+			
+			if( updateCount % 10 == 0 ) {
+				
+				System.out.println("updates: " + updateCount + ", mean update time: " + meanUpdateTime);
+			}
+//			System.out.println("influences: " + influences);
+//			System.out.println("update time: " + updateTime);
 		}
 		
 		public void drawFrame() {
@@ -640,6 +683,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			
 			public boolean		hasHistory;
 			public ArrayList<PVector> history;
+			private boolean satisfied;
 			
 			public Element( String _myTerm, String _myLove, int _loveLevel, Color _color, int _id, boolean hasHistory) {
 				
@@ -697,7 +741,14 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				// Timer
 //				double SortBoundaryFinder_start = System.nanoTime();
-				int[] Xbounds = findSortBoundaryX();
+				
+//				prevboundMin = myIndexX;
+//				prevboundMax = myIndexX;
+				
+//				int[] Xbounds = findSortBoundaryX();
+				findSortBoundaryX();
+				
+				
 //				int[] Ybounds = findSortBoundaryY();
 //				System.out.println("measured time for SortBoundaryFinder : " + ((System.nanoTime() - SortBoundaryFinder_start) / 1000000d) + " milliseconds");
 //				System.out.println(Xbounds[0] +" / " + Xbounds[1]);
@@ -741,21 +792,24 @@ public class VisApplet extends PApplet implements VisInterface{
 //				
 //
 //				for(int i = myIndexY + Ybounds[0];  i < myIndexY + Ybounds[1];  i++ ) {
-				for(int i = myIndexX + Xbounds[0];  i < myIndexX + Xbounds[1];  i++ ) {
+//				for(int i = myIndexX + Xbounds[0];  i < myIndexX + Xbounds[1];  i++ ) {
+//				for(int i = Xbounds[0];  i <  Xbounds[1];  i++ ) {
+				for(int i = prevboundMin;  i <  prevboundMax;  i++ ) {
+
 					
 					Element e = sortedElementsX[i];
 					
 					// TODO take into account the special love i have
 					// TODO take into account the others special love
 					
-					if ( /*myID != e.getID() && */ myTermHash != e.getTermHash() ) {
+					if ( /*myID != e.getID() && */ myTermHash != e.getTermHash()){// && !e.isSatisfied()) {
 					
 												
 						PVector thisInfluenceDirection = new PVector(e.getPos().x, e.getPos().y);
 						thisInfluenceDirection.sub(myPos);
 						
 						float thisDistance = thisInfluenceDirection.magSq();
-						float thisrealDistance = thisInfluenceDirection.mag();
+//						float thisrealDistance = thisInfluenceDirection.mag();
 						
 						if( thisDistance < (maximumDrawSpread) ) {
 							
@@ -772,10 +826,23 @@ public class VisApplet extends PApplet implements VisInterface{
 							thisInfluenceDirection.mult(thisInfluenceMag);
 
 							myDirection.add(thisInfluenceDirection);
+//							influences++;
+//							thisInfluenceDirection.mult(-1f);
+//							e.addDirection(thisInfluenceDirection);
+//							influences++;
 						}
 					}
 					
 				}
+//				this.satisfied = true;
+			}
+			
+			public void addDirection(PVector v) {
+				myDirection.add(v);
+			}
+			
+			public boolean isSatisfied() {
+				return satisfied;
 			}
 			
 			private void hashCompare(int[] x, int[] y) {
@@ -799,24 +866,34 @@ public class VisApplet extends PApplet implements VisInterface{
 				}
 			}
 			
-			private int[] findSortBoundaryX() {
+			private void findSortBoundaryX() {
 				
 //				TODO  implement a faster way to find the boundary
 //				
 //				int 	steps		= 4;
 //				boolean positive	= false;
 				
-				int negBound = 0;
-				int posBound = sortedElementsX.length;
+//				int negBound = 0;
+//				int posBound = sortedElementsX.length;
 
-				for( int i = myIndexX; myPos.x - sortedElementsX[i].getXpos() <= maximumDistanceAffected && i > 0  ;i--) negBound = i;
+//				for( int i = myIndexX; myPos.x - sortedElementsX[i].getXpos() <= maximumDistanceAffected && i > 0  ;i--) negBound = i;
+				for( int i = prevboundMin; myPos.x - sortedElementsX[i].getXpos() >= maximumDistanceAffected && i < sortedElementsX.length-1  ;i++) prevboundMin = i;// negBound = i;
 				
-				for( int i = myIndexX; sortedElementsX[i].getXpos() - myPos.x <= maximumDistanceAffected && i < sortedElementsX.length-2  ;i++) posBound = i;
+//				for( int i = myIndexX; sortedElementsX[i].getXpos() - myPos.x <= maximumDistanceAffected && i < sortedElementsX.length-2  ;i++) posBound = i;				
+				for( int i = prevboundMax; sortedElementsX[i].getXpos() - myPos.x <= maximumDistanceAffected && i < sortedElementsX.length-1  ;i++) prevboundMax = i; //posBound = i;
 				
-				negBound -= myIndexX;
-				posBound -= myIndexX;
+//				prevboundMin = negBound;
+//				prevboundMax = posBound;
+//				
+//				System.out.println(prevboundMin);
+//				System.out.println(prevboundMax);
+//				System.out.println();
 				
-				return new int[] {negBound, posBound};
+//				negBound -= myIndexX;
+//				posBound -= myIndexX;
+				
+//				return new int[] {negBound, posBound};
+//				return new int[] {prevboundMin, prevboundMax};
 			}
 			
 			private int[] findSortBoundaryY() {
@@ -914,6 +991,8 @@ public class VisApplet extends PApplet implements VisInterface{
 				if( hasHistory ) {
 					history.add(new PVector(myPos.x, myPos.y));
 				}
+				
+				satisfied = false;
 				
 //				if( abs(myPos.x) > abs(maxPosition) ) maxPosition = abs(myPos.x);
 //				if( abs(myPos.y) > abs(maxPosition) ) maxPosition = abs(myPos.y);
@@ -1108,6 +1187,12 @@ public class VisApplet extends PApplet implements VisInterface{
 			} else {
 				return false;
 			}
+		}
+
+		@Override
+		public void destroy() {
+
+			this.graphics = null;
 		}
 	}
 
@@ -1315,7 +1400,11 @@ public class VisApplet extends PApplet implements VisInterface{
 			return false;
 		}
 
-		
+		@Override
+		public void destroy() {
+
+			this.graphics = null;
+		}
 	}
 
 	public class GridHard implements VisInterface{
@@ -1514,7 +1603,15 @@ public class VisApplet extends PApplet implements VisInterface{
 
 		public PGraphics getVisualisationGraphics() {
 			if( visBool) {
-				return graphics;
+				
+				PGraphics r;
+				try {
+					r = graphics;
+					graphics = null;
+				} catch (Exception e) {
+					r = null;
+				}
+				return r;
 			}
 			else return null;
 		}
@@ -1560,6 +1657,9 @@ public class VisApplet extends PApplet implements VisInterface{
 			return false;
 		}
 
+		public void destroy() {
+			this.graphics = null;
+		}
 	}
 	
 	public class Circular implements VisInterface{
@@ -1816,6 +1916,11 @@ public class VisApplet extends PApplet implements VisInterface{
 			return false;
 		}
 
+		@Override
+		public void destroy() {
+
+			this.graphics = null;
+		}
 	}
 
 	public class Path implements VisInterface{
@@ -2076,7 +2181,11 @@ public class VisApplet extends PApplet implements VisInterface{
 			return false;
 		}
 
+		@Override
+		public void destroy() {
 
+			this.graphics = null;
+		}
 	}
 
 	@Override

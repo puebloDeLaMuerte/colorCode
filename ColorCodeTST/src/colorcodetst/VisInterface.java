@@ -35,4 +35,6 @@ public interface VisInterface{
 	public boolean setType(TableTypes _type);
 	
 	public void drawFrame();
+	
+	public void destroy();
 }

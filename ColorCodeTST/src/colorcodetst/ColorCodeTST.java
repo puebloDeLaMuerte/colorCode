@@ -589,8 +589,17 @@ public class ColorCodeTST extends PApplet implements ActionListener {
 	public void closeVisFrame() {
 		visFrame.visApplet.destroy();
 		visFrame.visApplet.dispose();
+		visFrame.visApplet = null;
 		visFrame.dispose();
 		visFrame = null;		
+		System.gc();
+		try {
+			Thread.sleep(150);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.gc();
 	}
 
 	private void visualize() {
