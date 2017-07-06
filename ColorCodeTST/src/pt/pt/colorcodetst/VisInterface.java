@@ -1,4 +1,4 @@
-package colorcodetst;
+package pt.pt.colorcodetst;
 
 import processing.core.PGraphics;
 import pt.pt.colorcode.utils.TableTypes;

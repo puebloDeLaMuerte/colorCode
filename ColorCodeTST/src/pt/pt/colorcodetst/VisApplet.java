@@ -1,4 +1,4 @@
-package colorcodetst;
+package pt.pt.colorcodetst;
 
 
 import java.awt.Color;
