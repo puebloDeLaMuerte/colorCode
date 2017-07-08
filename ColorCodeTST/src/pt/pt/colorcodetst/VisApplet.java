@@ -333,17 +333,23 @@ public class VisApplet extends PApplet implements VisInterface{
 		private float maxPosition;
 		
 //		private float maximumInitialSpread = 200;//80;
-		private float maximumInitialSpread = 160;
+		private float maximumInitialSpread = 100;
 		
-		private int   maximumDistanceAffected = 14;
-		private float maximumDrawSpread = 200;
-//		private float maximumDrawSpread = 18;
-//		private float maximumDrawSpread = 1199800;
+		private int   preSortMaxDistance = 14;
+		private float maxDistanceAffectedSquared = 200;
+//		private int   preSortMaxDistance = 20;
+//		private float maxDistanceAffectedSquared = 400;
 		
-		private float influenceFactor = (float)0.000005;
+//		private float maxDistanceAffectedSquared = 18;
+//		private float maxDistanceAffectedSquared = 1199800;
+		
+//		private float influenceFactor = (float)0.000005;
 //		private float influenceFactor = (float)0.0005;
+		private float influenceFactor = (float)0.5f;
+//		private float influenceFactor = (float)1f;
 //		private float influenceFactor = (float)15;
 		
+		private float motionDamping = 0.7f;
 		
 		private float repulsionRate = -0.0f;
 //		private float repulsionRate = -0.6f;
@@ -369,13 +375,18 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		private void prepareIt(RelationTable _table){
 			
-			this.graphics = createGraphics(10, 10);
-			this.graphics.setSize(visualisationSize	, visualisationSize);
+			this.graphics = createGraphics(visualisationSize, visualisationSize);
+//			this.graphics.setSize(visualisationSize	, visualisationSize);
 			this.graphics.beginDraw();
 			this.graphics.background(255);
 			this.graphics.endDraw();
 			
 			myTable = _table;
+			
+			
+			// TODO pre-square the relation-values according to nebular-formula for repulsion (to speed up the simulation)
+			
+			
 			
 			// create the Elements
 			
@@ -478,9 +489,11 @@ public class VisApplet extends PApplet implements VisInterface{
 				list.add( new DataField("tablesize", myTable.getRowSize()) );
 				list.add( new DataField("elementscount", elements.length) );
 				list.add( new DataField("initialspread", maximumInitialSpread) );
-				list.add( new DataField("maxdrawspread", maximumDrawSpread) );
+				list.add( new DataField("preSortMaxDistance", preSortMaxDistance));
+				list.add( new DataField("maxDistanceAffectedSquared", maxDistanceAffectedSquared) );
 				list.add( new DataField("influencefactor", influenceFactor) );
 				list.add( new DataField("repulsionrate", repulsionRate) );
+				list.add( new DataField("motionDamping", motionDamping));
 			
 				String filename = folderName + "/" + fileName + "_metadata.txt"; 
 				try {
@@ -593,7 +606,7 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		private void drawIt() {
 			
-			//maximumDrawSpread = maxPosition;
+			//maxDistanceAffectedSquared = maxPosition;
 			
 			//this.graphics = createGraphics(10, 10);
 			//this.graphics.setSize(visualisationSize	, visualisationSize);
@@ -684,6 +697,7 @@ public class VisApplet extends PApplet implements VisInterface{
 			public boolean		hasHistory;
 			public ArrayList<PVector> history;
 			private boolean satisfied;
+//			private PVector thisInfluenceDirection = new PVector(0, 0);
 			
 			public Element( String _myTerm, String _myLove, int _loveLevel, Color _color, int _id, boolean hasHistory) {
 				
@@ -736,7 +750,7 @@ public class VisApplet extends PApplet implements VisInterface{
 								
 				
 				// motion damper:
-				myDirection.mult(0.7f);
+				myDirection.mult(motionDamping);
 				
 				
 				// Timer
@@ -806,22 +820,31 @@ public class VisApplet extends PApplet implements VisInterface{
 					
 												
 						PVector thisInfluenceDirection = new PVector(e.getPos().x, e.getPos().y);
+//						thisInfluenceDirection.x = e.getPos().x;
+//						thisInfluenceDirection.y = e.getPos().y;
 						thisInfluenceDirection.sub(myPos);
 						
 						float thisDistance = thisInfluenceDirection.magSq();
 //						float thisrealDistance = thisInfluenceDirection.mag();
 						
-						if( thisDistance < (maximumDrawSpread) ) {
+						if( thisDistance < (maxDistanceAffectedSquared) ) {
 							
 
 							thisInfluenceDirection.normalize();
 
-							int thisRelation =  myTable.getRelation( myTerm, e.getTerm());
+							float thisRelation =  (float)myTable.getRelation( myTerm, e.getTerm());
 							
-							float thisInfluenceMag = 1 / (thisRelation + 0.000001f);
+//							thisRelation *= 4f;
+//							thisRelation *= thisRelation;
+//							thisRelation /= 10;
 							
-							thisInfluenceMag = thisInfluenceMag / thisDistance * influenceFactor * -1;
+//							float thisInfluenceMag = 1 / (thisRelation + 0.000001f);
+							float thisInfluenceMag = 1f / (thisRelation + 1f);
+							
+//							thisInfluenceMag = (float)((float)thisInfluenceMag / (float)thisDistance * (float)influenceFactor * (float)-1f);
+							thisInfluenceMag = thisInfluenceMag / thisDistance * influenceFactor * -1f;
 
+//							System.out.println("rel: " + thisRelation +"\ninf: "+thisInfluenceMag +"\n");
 
 							thisInfluenceDirection.mult(thisInfluenceMag);
 
@@ -876,11 +899,11 @@ public class VisApplet extends PApplet implements VisInterface{
 //				int negBound = 0;
 //				int posBound = sortedElementsX.length;
 
-//				for( int i = myIndexX; myPos.x - sortedElementsX[i].getXpos() <= maximumDistanceAffected && i > 0  ;i--) negBound = i;
-				for( int i = prevboundMin; myPos.x - sortedElementsX[i].getXpos() >= maximumDistanceAffected && i < sortedElementsX.length-1  ;i++) prevboundMin = i;// negBound = i;
+//				for( int i = myIndexX; myPos.x - sortedElementsX[i].getXpos() <= preSortMaxDistance && i > 0  ;i--) negBound = i;
+				for( int i = prevboundMin; myPos.x - sortedElementsX[i].getXpos() >= preSortMaxDistance && i < sortedElementsX.length-1  ;i++) prevboundMin = i;// negBound = i;
 				
-//				for( int i = myIndexX; sortedElementsX[i].getXpos() - myPos.x <= maximumDistanceAffected && i < sortedElementsX.length-2  ;i++) posBound = i;				
-				for( int i = prevboundMax; sortedElementsX[i].getXpos() - myPos.x <= maximumDistanceAffected && i < sortedElementsX.length-1  ;i++) prevboundMax = i; //posBound = i;
+//				for( int i = myIndexX; sortedElementsX[i].getXpos() - myPos.x <= preSortMaxDistance && i < sortedElementsX.length-2  ;i++) posBound = i;				
+				for( int i = prevboundMax; sortedElementsX[i].getXpos() - myPos.x <= preSortMaxDistance && i < sortedElementsX.length-1  ;i++) prevboundMax = i; //posBound = i;
 				
 //				prevboundMin = negBound;
 //				prevboundMax = posBound;
@@ -908,9 +931,9 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 //				System.out.println("LENGTH: " + sortedElementsY.length);
 
-				for( int i = myIndexY; myPos.y - sortedElementsY[i].getYpos() <= maximumDistanceAffected && i > 0  ;i--) negBound = i;
+				for( int i = myIndexY; myPos.y - sortedElementsY[i].getYpos() <= preSortMaxDistance && i > 0  ;i--) negBound = i;
 				
-				for( int i = myIndexY; sortedElementsY[i].getYpos() - myPos.y <= maximumDistanceAffected && i < sortedElementsY.length-1  ;i++) posBound = i;
+				for( int i = myIndexY; sortedElementsY[i].getYpos() - myPos.y <= preSortMaxDistance && i < sortedElementsY.length-1  ;i++) posBound = i;
 				
 				negBound -= myIndexY;
 				posBound -= myIndexY;
@@ -944,7 +967,7 @@ public class VisApplet extends PApplet implements VisInterface{
 						float thisDistance = thisInfluenceDirection.magSq();
 						//thisDistance = thisDistance*thisDistance;
 						
-						if( thisDistance < (maximumDrawSpread) ) {
+						if( thisDistance < (maxDistanceAffectedSquared) ) {
 							
 //							effect = true;
 
@@ -956,6 +979,7 @@ public class VisApplet extends PApplet implements VisInterface{
 							
 							thisInfluenceMag = thisInfluenceMag / thisDistance * influenceFactor * -1;
 
+							
 //  so war's mal:
 //							if (thisRelation == 0) {
 //								thisInfluenceMag = (float) repulsionRate / thisDistance;
