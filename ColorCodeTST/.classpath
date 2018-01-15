@@ -77,5 +77,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/Users/pht/code/git/ColorCode/ColorCodeTST/lib/user/toxiclibs-complete-0020/toxiclibs_p5/library/toxiclibs_p5.jar"/>
+	<classpathentry kind="lib" path="/Users/pht/code/git/ColorCode/ColorCodeTST/lib/user/toxiclibs-complete-0020/toxiclibscore/library/toxiclibscore.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

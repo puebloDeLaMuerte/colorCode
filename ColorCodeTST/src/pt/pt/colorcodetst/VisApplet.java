@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Set;
 
 import processing.core.PApplet;
@@ -29,6 +30,14 @@ import pt.pt.colorcode.utils.metadata.DataField;
 import pt.pt.colorcode.utils.metadata.MetaDater;
 import pt.pt.colorcode.utils.quicksort.Quicksort;
 import pt.pt.colorcode.utils.quicksort.SortElement;
+
+import toxi.geom.*;
+import toxi.geom.mesh2d.*;
+import toxi.util.*;
+import toxi.util.datatypes.*;
+import toxi.processing.*;
+//import toxi.*;
+
 
 public class VisApplet extends PApplet implements VisInterface{
 	
@@ -322,7 +331,7 @@ public class VisApplet extends PApplet implements VisInterface{
 		private RelationTable 	myTable;
 		private PGraphics 		graphics;
 
-		private float zoomfactor = 1;
+		private float zoomfactor = 3;//40;
 		private int xOffset = 0, yOffset = 0;
 		
 		private long	meanUpdateTime = -1;;
@@ -333,7 +342,7 @@ public class VisApplet extends PApplet implements VisInterface{
 		private float maxPosition;
 		
 //		private float maximumInitialSpread = 200;//80;
-		private float maximumInitialSpread = 100;
+		private float maximumInitialSpread = 90;
 		
 		private int   preSortMaxDistance = 14;
 		private float maxDistanceAffectedSquared = 200;
@@ -366,6 +375,8 @@ public class VisApplet extends PApplet implements VisInterface{
 		private long drawTime	= 0;
 
 		public int influences;
+
+		private boolean drawGradient = true;;
 		
 		
 		public Nebular(){
@@ -594,9 +605,15 @@ public class VisApplet extends PApplet implements VisInterface{
 		
 		public void drawFrame() {
 //			long drawStart = millis();
+			
+			if( !drawGradient ) {
+				return;
+			}
+			
 			drawIt();
 //			drawTime = millis() - drawStart;
 //			System.out.println("draw time: " + drawTime);
+			
 			
 			if (save && !pauseToggle) {
 				saveVisualisation(false, folderName+"/"+ fileName+ "_" + nfs(saveFrameCount++, 5));
@@ -635,7 +652,7 @@ public class VisApplet extends PApplet implements VisInterface{
 				
 				this.graphics.fill(e.myColor.getRGB(), 160);
 				
-				this.graphics.ellipse(mappedXPos(e.getXpos())-2, mappedYPos(e.getYpos())-2, 5, 5);
+				this.graphics.ellipse(mappedXPos(e.getXpos()), mappedYPos(e.getYpos()), 5, 5);
 				
 //				if( e.hasHistory && e.history.size() > 3) {
 //					
@@ -664,6 +681,79 @@ public class VisApplet extends PApplet implements VisInterface{
 //				}
 				
 			}
+			
+			
+			if( updateCount > 60 ) {
+				
+				Voronoi voronoi;
+
+				ToxiclibsSupport gfx;
+				
+				voronoi = new Voronoi(1000000);
+				
+				// Timer
+				double adding_start = System.nanoTime();
+				int f = 0;
+				
+				ArrayList<Vec2D> list = new ArrayList<Vec2D>();
+				
+				
+				System.out.println("adding "+ elements.length+" Vectors to array... ");
+				for (Element e : elements) {
+					list.add(new Vec2D((e.getXpos()), (e.getYpos())));
+					f++;
+					System.out.print(".");
+					if(f%100 == 0) {
+						System.out.println();
+					}
+				}
+				System.out.println("...done");
+				System.out.println("adding points to voronoi...");
+				
+				voronoi.addPoints(list);
+				
+				System.out.println("done");
+				
+				System.out.println("measured time for adding " + f +" elements: " + ((System.nanoTime() - adding_start) / 1000000d) + " milliseconds");
+
+				
+				
+				
+				
+				System.out.println("drawing triangle mesh...");
+				
+				this.graphics.stroke(0);
+				this.graphics.noFill();
+				this.graphics.stroke(0, 0, 255, 50);
+				this.graphics.beginShape(TRIANGLES);
+				// get the delaunay triangles
+				for (Triangle2D t : voronoi.getTriangles()) {
+					// ignore any triangles which share a vertex with the initial root triangle
+					if (!true || (abs(t.a.x)!=10000 && abs(t.a.y)!=10000)) {
+						
+//						gfx.triangle(t, false);
+						
+						
+						
+						this.graphics.vertex(mappedXPos(t.a.x), mappedYPos(t.a.y));
+						this.graphics.vertex(mappedXPos(t.b.x), mappedYPos(t.b.y));
+						this.graphics.vertex(mappedXPos(t.c.x), mappedYPos(t.c.y));
+						
+						this.graphics.stroke(255,0,0,100);
+						this.graphics.ellipse(mappedXPos(t.computeCentroid().x), mappedYPos(t.computeCentroid().y),2,2);
+						this.graphics.stroke(0, 0, 255, 50);
+
+						System.out.print(".");
+						if(f%100 == 0) System.out.println();
+					}
+				}
+				this.graphics.endShape();
+				System.out.println("...end draw triangles");
+				
+				drawGradient = false;
+			}
+			
+			
 			this.graphics.popMatrix();
 			this.graphics.fill(0);
 			this.graphics.text("updates: "+ updateCount, 20, 20);
@@ -835,8 +925,8 @@ public class VisApplet extends PApplet implements VisInterface{
 							float thisRelation =  (float)myTable.getRelation( myTerm, e.getTerm());
 							
 //							thisRelation *= 4f;
-//							thisRelation *= thisRelation;
-//							thisRelation /= 10;
+							thisRelation *= thisRelation;
+							thisRelation /= 3;
 							
 //							float thisInfluenceMag = 1 / (thisRelation + 0.000001f);
 							float thisInfluenceMag = 1f / (thisRelation + 1f);
